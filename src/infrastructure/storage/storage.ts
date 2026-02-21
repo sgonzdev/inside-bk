@@ -1,0 +1,61 @@
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  CreateBucketCommand,
+  HeadBucketCommand,
+  PutBucketPolicyCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { env } from '../../shared/config/env';
+
+const s3 = new S3Client({
+  endpoint: env.S3_ENDPOINT,
+  region: env.S3_REGION,
+  credentials: { accessKeyId: env.S3_ACCESS_KEY, secretAccessKey: env.S3_SECRET_KEY },
+  forcePathStyle: true,
+});
+
+/** Crea el bucket si no existe y aplica política pública para avatars/ */
+export async function ensureBucket() {
+  try {
+    await s3.send(new HeadBucketCommand({ Bucket: env.S3_BUCKET }));
+  } catch {
+    await s3.send(new CreateBucketCommand({ Bucket: env.S3_BUCKET }));
+    console.log(`Bucket "${env.S3_BUCKET}" creado en MinIO`);
+  }
+
+  // Lectura pública solo para avatars/*
+  const policy = JSON.stringify({
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Effect: 'Allow',
+        Principal: '*',
+        Action: ['s3:GetObject'],
+        Resource: [`arn:aws:s3:::${env.S3_BUCKET}/avatars/*`],
+      },
+    ],
+  });
+
+  await s3.send(new PutBucketPolicyCommand({ Bucket: env.S3_BUCKET, Policy: policy }));
+  console.log(`Política pública aplicada a ${env.S3_BUCKET}/avatars/*`);
+}
+
+export async function uploadFile(key: string, body: Buffer, contentType: string) {
+  await s3.send(
+    new PutObjectCommand({ Bucket: env.S3_BUCKET, Key: key, Body: body, ContentType: contentType }),
+  );
+  return `${env.S3_PUBLIC_URL}/${env.S3_BUCKET}/${key}`;
+}
+
+export async function deleteFile(key: string) {
+  await s3.send(new DeleteObjectCommand({ Bucket: env.S3_BUCKET, Key: key }));
+}
+
+export async function getPresignedUrl(key: string, expiresIn = 3600) {
+  return getSignedUrl(s3, new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: key }), { expiresIn });
+}
+
+export { s3 };

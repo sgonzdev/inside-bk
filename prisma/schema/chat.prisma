@@ -1,0 +1,37 @@
+model ChatRoom {
+  id        String   @id @default(uuid())
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  participants ChatParticipant[]
+  messages     ChatMessage[]
+
+  @@map("chat_rooms")
+}
+
+model ChatParticipant {
+  id       String @id @default(uuid())
+  userId   String @map("user_id")
+  roomId   String @map("room_id")
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
+  @@map("chat_participants")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  roomId    String   @map("room_id")
+  senderId  String   @map("sender_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@map("chat_messages")
+}
