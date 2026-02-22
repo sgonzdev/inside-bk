@@ -1,8 +1,8 @@
-import { createServer } from 'http';
-import app from './app';
-import { env } from './shared/config/env';
-import { initializeSocket } from './infrastructure/websocket/socket';
-import { ensureBucket } from './infrastructure/storage/storage';
+import { createServer } from "http";
+import app from "./app";
+import { env } from "./shared/config/env";
+import { initializeSocket } from "./infrastructure/websocket/socket";
+import { ensureBucket } from "./infrastructure/storage/storage";
 
 const httpServer = createServer(app);
 

@@ -1,5 +1,5 @@
-import prisma from '../../infrastructure/database/prisma';
-import { UpdatePreferencesInput } from './preferences.validation';
+import prisma from "../../infrastructure/database/prisma";
+import { UpdatePreferencesInput } from "./preferences.validation";
 
 export class PreferencesRepository {
   async findByUserId(userId: string) {

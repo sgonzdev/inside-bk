@@ -1,12 +1,20 @@
-import { TokenType } from '.prisma/client/index';
-import prisma from '../../infrastructure/database/prisma';
-import { RegisterInput } from './auth.validation';
+import { TokenType } from ".prisma/client/index";
+import prisma from "../../infrastructure/database/prisma";
+import { RegisterInput } from "./auth.validation";
 
 export class AuthRepository {
   async findByEmail(email: string) {
     return prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true, password: true, firstName: true, lastName: true, role: true, emailVerified: true },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        emailVerified: true,
+      },
     });
   }
 
@@ -58,8 +66,15 @@ export class AuthRepository {
     return prisma.verificationToken.deleteMany({ where: { userId, type } });
   }
 
-  async createVerificationToken(token: string, userId: string, type: TokenType, expiresAt: Date) {
-    return prisma.verificationToken.create({ data: { token, userId, type, expiresAt } });
+  async createVerificationToken(
+    token: string,
+    userId: string,
+    type: TokenType,
+    expiresAt: Date,
+  ) {
+    return prisma.verificationToken.create({
+      data: { token, userId, type, expiresAt },
+    });
   }
 
   async findVerificationToken(token: string, type: TokenType) {
@@ -71,7 +86,10 @@ export class AuthRepository {
   }
 
   async markEmailVerified(userId: string) {
-    return prisma.user.update({ where: { id: userId }, data: { emailVerified: true } });
+    return prisma.user.update({
+      where: { id: userId },
+      data: { emailVerified: true },
+    });
   }
 
   async findLoginAttempt(userId: string) {
@@ -97,7 +115,7 @@ export class AuthRepository {
   async findLoginHistory(userId: string) {
     return prisma.loginHistory.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 10,
     });
   }

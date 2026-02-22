@@ -1,5 +1,5 @@
-import prisma from '../../infrastructure/database/prisma';
-import { UpdateProfileInput } from './users.validation';
+import prisma from "../../infrastructure/database/prisma";
+import { UpdateProfileInput } from "./users.validation";
 
 const selectFields = {
   id: true,
@@ -23,6 +23,10 @@ export class UsersRepository {
   }
 
   async updateAvatarUrl(id: string, avatarUrl: string | null) {
-    return prisma.user.update({ where: { id }, data: { avatarUrl }, select: selectFields });
+    return prisma.user.update({
+      where: { id },
+      data: { avatarUrl },
+      select: selectFields,
+    });
   }
 }

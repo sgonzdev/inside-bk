@@ -1,4 +1,4 @@
-import prisma from '../../infrastructure/database/prisma';
+import prisma from "../../infrastructure/database/prisma";
 
 export class ConsentRepository {
   async findByUserId(userId: string) {
@@ -23,23 +23,43 @@ export class ConsentRepository {
   }
 
   async markUserConsentGiven(userId: string) {
-    return prisma.user.update({ where: { id: userId }, data: { consentGiven: true } });
+    return prisma.user.update({
+      where: { id: userId },
+      data: { consentGiven: true },
+    });
   }
 
   async findAllWithUser(skip: number, take: number, search?: string) {
-    const where = search ? {
-      user: {
-        OR: [
-          { email: { contains: search, mode: 'insensitive' as const } },
-          { idDocument: { contains: search, mode: 'insensitive' as const } },
-        ],
-      },
-    } : {};
+    const where = search
+      ? {
+          user: {
+            OR: [
+              { email: { contains: search, mode: "insensitive" as const } },
+              {
+                idDocument: { contains: search, mode: "insensitive" as const },
+              },
+            ],
+          },
+        }
+      : {};
 
     const [data, total] = await Promise.all([
       prisma.consent.findMany({
-        where, skip, take, orderBy: { signedAt: 'desc' },
-        include: { user: { select: { id: true, firstName: true, lastName: true, email: true, idDocument: true } } },
+        where,
+        skip,
+        take,
+        orderBy: { signedAt: "desc" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              idDocument: true,
+            },
+          },
+        },
       }),
       prisma.consent.count({ where }),
     ]);

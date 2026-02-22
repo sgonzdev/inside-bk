@@ -1,5 +1,5 @@
-import { AIProvider, AIMessage, AIOptions, AIResponse } from './ai-provider';
-import { env } from '../../shared/config/env';
+import { AIProvider, AIMessage, AIOptions, AIResponse } from "./ai-provider";
+import { env } from "../../shared/config/env";
 
 interface AnthropicTool {
   name: string;
@@ -8,7 +8,7 @@ interface AnthropicTool {
 }
 
 interface AnthropicBlock {
-  type: 'text' | 'tool_use';
+  type: "text" | "tool_use";
   text?: string;
   name?: string;
   input?: Record<string, unknown>;
@@ -16,18 +16,22 @@ interface AnthropicBlock {
 
 export class AnthropicProvider implements AIProvider {
   private readonly apiKey: string;
-  private readonly baseUrl = 'https://api.anthropic.com/v1/messages';
+  private readonly baseUrl = "https://api.anthropic.com/v1/messages";
 
   constructor() {
     if (!env.ANTHROPIC_API_KEY) {
-      throw new Error('AI_CONFIG_ERROR');
+      throw new Error("AI_CONFIG_ERROR");
     }
     this.apiKey = env.ANTHROPIC_API_KEY;
   }
 
-  async chat(systemPrompt: string, messages: AIMessage[], options?: AIOptions): Promise<AIResponse> {
+  async chat(
+    systemPrompt: string,
+    messages: AIMessage[],
+    options?: AIOptions,
+  ): Promise<AIResponse> {
     const body: Record<string, unknown> = {
-      model: env.AI_MODEL || 'claude-sonnet-4-6',
+      model: env.AI_MODEL || "claude-sonnet-4-6",
       max_tokens: options?.maxTokens ?? env.AI_MAX_TOKENS,
       temperature: options?.temperature ?? env.AI_TEMPERATURE,
       system: systemPrompt,
@@ -35,36 +39,38 @@ export class AnthropicProvider implements AIProvider {
     };
 
     if (options?.tools?.length) {
-      body.tools = options.tools.map((t): AnthropicTool => ({
-        name: t.name,
-        description: t.description,
-        input_schema: t.parameters,
-      }));
+      body.tools = options.tools.map(
+        (t): AnthropicTool => ({
+          name: t.name,
+          description: t.description,
+          input_schema: t.parameters,
+        }),
+      );
     }
 
     const response = await fetch(this.baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01',
+        "Content-Type": "application/json",
+        "x-api-key": this.apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      throw new Error('AI_PROVIDER_ERROR');
+      throw new Error("AI_PROVIDER_ERROR");
     }
 
     const data = (await response.json()) as { content: AnthropicBlock[] };
 
     const textContent = data.content
-      .filter((b) => b.type === 'text')
+      .filter((b) => b.type === "text")
       .map((b) => b.text)
-      .join('');
+      .join("");
 
     const toolCalls = data.content
-      .filter((b) => b.type === 'tool_use')
+      .filter((b) => b.type === "tool_use")
       .map((b) => ({ name: b.name!, arguments: b.input! }));
 
     return {

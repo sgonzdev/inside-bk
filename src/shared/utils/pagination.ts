@@ -15,6 +15,14 @@ export function parsePagination(query: PaginationQuery) {
   return { page, limit, skip };
 }
 
-export function paginate<T>(data: T[], total: number, page: number, limit: number): PaginatedResult<T> {
-  return { data, meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
+export function paginate<T>(
+  data: T[],
+  total: number,
+  page: number,
+  limit: number,
+): PaginatedResult<T> {
+  return {
+    data,
+    meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
 }
