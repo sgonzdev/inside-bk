@@ -2,6 +2,7 @@ import { ChatRepository } from './chat.repository';
 import { CreateRoomInput } from './chat.validation';
 import { AppError } from '../../shared/errors/app-error';
 import { getIO } from '../../infrastructure/websocket/socket';
+import { parsePagination, paginate, PaginationQuery } from '../../shared/utils/pagination';
 
 export class ChatService {
   constructor(private readonly repo = new ChatRepository()) {}
@@ -18,8 +19,10 @@ export class ChatService {
     return this.repo.createRoom(data.name, allParticipants);
   }
 
-  async getRooms(userId: string) {
-    return this.repo.findRoomsByUser(userId);
+  async getRooms(userId: string, query: PaginationQuery & { search?: string }) {
+    const { page, limit, skip } = parsePagination(query);
+    const { data, total } = await this.repo.findRoomsByUser(userId, skip, limit, query.search);
+    return paginate(data, total, page, limit);
   }
 
   async getMessages(roomId: string, userId: string) {

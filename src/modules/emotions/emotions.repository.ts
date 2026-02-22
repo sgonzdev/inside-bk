@@ -21,12 +21,12 @@ export class EmotionsRepository {
     });
   }
 
-  async findLogsByUser(userId: string) {
-    return prisma.emotionLog.findMany({
-      where: { userId },
-      include: { emotion: true },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findLogsByUser(userId: string, skip: number, take: number) {
+    const [data, total] = await Promise.all([
+      prisma.emotionLog.findMany({ where: { userId }, include: { emotion: true }, orderBy: { createdAt: 'desc' }, skip, take }),
+      prisma.emotionLog.count({ where: { userId } }),
+    ]);
+    return { data, total };
   }
 
   async getStats(query: StatsQuery) {

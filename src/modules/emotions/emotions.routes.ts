@@ -8,8 +8,8 @@ const router = Router();
 
 router.get('/wheel', controller.getWheel);
 router.use(authenticate);
-router.post('/log', validate(logEmotionSchema), controller.logEmotion);
-router.get('/history', controller.getHistory);
+router.post('/log', authorize('STUDENT'), validate(logEmotionSchema), controller.logEmotion);
+router.get('/history', authorize('STUDENT'), controller.getHistory);
 router.get('/stats', authorize('PROFESSIONAL'), validate(statsQuerySchema, 'query'), controller.getStats);
 
 export default router;

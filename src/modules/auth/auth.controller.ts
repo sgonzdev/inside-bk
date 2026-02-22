@@ -11,7 +11,9 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
-  const result = await service.login(req.body);
+  const ip = (req.headers['x-forwarded-for'] as string) ?? req.socket.remoteAddress ?? 'unknown';
+  const userAgent = req.headers['user-agent'];
+  const result = await service.login(req.body, ip, userAgent);
   res.json({ status: 'success', data: result });
 });
 

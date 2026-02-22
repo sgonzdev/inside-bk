@@ -11,7 +11,7 @@ import swaggerRouter from './infrastructure/swagger/swagger';
 const app = express();
 
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: '500kb' }));
 app.use(cookieParser());
 
 app.get('/api/v1/health', (_req, res) => {
@@ -23,6 +23,7 @@ app.use('/docs', swaggerRouter);
 app.get('/ws-test', (_req, res) => {
   res.sendFile(path.join(__dirname, 'infrastructure/websocket/ws-playground.html'));
 });
+
 
 app.use(errorHandler);
 

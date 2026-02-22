@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { AppError } from '../errors/app-error';
+import * as codes from '../errors/error-codes';
+import prisma from '../../infrastructure/database/prisma';
 
 export interface AuthPayload {
   userId: string;
@@ -30,6 +32,17 @@ export function authenticate(req: Request, _res: Response, next: NextFunction) {
   } catch {
     throw AppError.unauthorized('AUTH_INVALID_TOKEN');
   }
+}
+
+export function requireActive(req: Request, _res: Response, next: NextFunction) {
+  prisma.user.findUnique({
+    where: { id: req.user!.userId },
+    select: { emailVerified: true, consentGiven: true, role: true },
+  }).then((user) => {
+    if (!user?.emailVerified) return next(AppError.forbidden(codes.AUTH_EMAIL_NOT_VERIFIED));
+    if (user.role === 'STUDENT' && !user.consentGiven) return next(AppError.forbidden(codes.CONSENT_REQUIRED));
+    next();
+  }).catch(next);
 }
 
 export function authorize(...roles: string[]) {

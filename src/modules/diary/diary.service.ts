@@ -1,12 +1,21 @@
 import { DiaryRepository } from './diary.repository';
 import { CreateDiaryInput, UpdateDiaryInput } from './diary.validation';
 import { AppError } from '../../shared/errors/app-error';
+import { parsePagination, paginate, PaginationQuery } from '../../shared/utils/pagination';
 
 export class DiaryService {
   constructor(private readonly repo = new DiaryRepository()) {}
 
-  async getAll(userId: string) {
-    return this.repo.findAllByUser(userId);
+  async getAll(userId: string, query: PaginationQuery & { search?: string }) {
+    const { page, limit, skip } = parsePagination(query);
+    const { data, total } = await this.repo.findAllByUser(userId, skip, limit, query.search);
+    return paginate(data, total, page, limit);
+  }
+
+  async getAllForProfessional(query: PaginationQuery & { search?: string }) {
+    const { page, limit, skip } = parsePagination(query);
+    const { data, total } = await this.repo.findAll(skip, limit, query.search);
+    return paginate(data, total, page, limit);
   }
 
   async getById(id: string, userId: string) {

@@ -10,8 +10,17 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { env } from '../../shared/config/env';
 
+// Cliente interno: usa S3_ENDPOINT (puede ser host Docker) para uploads/deletes
 const s3 = new S3Client({
   endpoint: env.S3_ENDPOINT,
+  region: env.S3_REGION,
+  credentials: { accessKeyId: env.S3_ACCESS_KEY, secretAccessKey: env.S3_SECRET_KEY },
+  forcePathStyle: true,
+});
+
+// Cliente público: firma URLs con S3_PUBLIC_URL para que el navegador pueda accederlas
+const s3Public = new S3Client({
+  endpoint: env.S3_PUBLIC_URL,
   region: env.S3_REGION,
   credentials: { accessKeyId: env.S3_ACCESS_KEY, secretAccessKey: env.S3_SECRET_KEY },
   forcePathStyle: true,
@@ -55,7 +64,7 @@ export async function deleteFile(key: string) {
 }
 
 export async function getPresignedUrl(key: string, expiresIn = 3600) {
-  return getSignedUrl(s3, new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: key }), { expiresIn });
+  return getSignedUrl(s3Public, new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: key }), { expiresIn });
 }
 
 export { s3 };

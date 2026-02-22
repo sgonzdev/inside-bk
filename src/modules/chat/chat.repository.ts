@@ -32,15 +32,22 @@ export class ChatRepository {
     });
   }
 
-  async findRoomsByUser(userId: string) {
-    return prisma.chatRoom.findMany({
-      where: { participants: { some: { userId } } },
-      include: {
-        participants: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
-        messages: { orderBy: { createdAt: 'desc' }, take: 1 },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  async findRoomsByUser(userId: string, skip: number, take: number, search?: string) {
+    const where = {
+      participants: { some: { userId } },
+      ...(search ? { name: { contains: search, mode: 'insensitive' as const } } : {}),
+    };
+    const [data, total] = await Promise.all([
+      prisma.chatRoom.findMany({
+        where, skip, take, orderBy: { createdAt: 'desc' },
+        include: {
+          participants: { include: { user: { select: { id: true, firstName: true, lastName: true } } } },
+          messages: { orderBy: { createdAt: 'desc' }, take: 1 },
+        },
+      }),
+      prisma.chatRoom.count({ where }),
+    ]);
+    return { data, total };
   }
 
   async findMessages(roomId: string, take = 50) {

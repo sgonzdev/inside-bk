@@ -3,6 +3,7 @@ import { LogEmotionInput, StatsQuery } from './emotions.validation';
 import { AppError } from '../../shared/errors/app-error';
 import { createAIProvider } from '../../infrastructure/ai';
 import { PreferencesService } from '../preferences/preferences.service';
+import { parsePagination, paginate, PaginationQuery } from '../../shared/utils/pagination';
 
 const LANG_LABEL: Record<string, string> = { ES: 'Spanish', EN: 'English' };
 
@@ -44,8 +45,10 @@ export class EmotionsService {
     return this.repo.createLog(userId, { ...data, aiFeedback });
   }
 
-  async getHistory(userId: string) {
-    return this.repo.findLogsByUser(userId);
+  async getHistory(userId: string, query: PaginationQuery) {
+    const { page, limit, skip } = parsePagination(query);
+    const { data, total } = await this.repo.findLogsByUser(userId, skip, limit);
+    return paginate(data, total, page, limit);
   }
 
   async getStats(query: StatsQuery) {

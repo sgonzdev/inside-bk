@@ -3,6 +3,7 @@ import { CreateNotificationInput } from './notifications.validation';
 import { getIO } from '../../infrastructure/websocket/socket';
 import { PreferencesService } from '../preferences/preferences.service';
 import { AppError } from '../../shared/errors/app-error';
+import { parsePagination, paginate, PaginationQuery } from '../../shared/utils/pagination';
 
 export class NotificationsService {
   constructor(
@@ -10,8 +11,10 @@ export class NotificationsService {
     private readonly prefs = new PreferencesService(),
   ) {}
 
-  async getAll(userId: string) {
-    return this.repo.findByUser(userId);
+  async getAll(userId: string, query: PaginationQuery) {
+    const { page, limit, skip } = parsePagination(query);
+    const { data, total } = await this.repo.findByUser(userId, skip, limit);
+    return paginate(data, total, page, limit);
   }
 
   async create(data: CreateNotificationInput) {

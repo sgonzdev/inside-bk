@@ -10,8 +10,8 @@ export const createRoom = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const getRooms = asyncHandler(async (req: Request, res: Response) => {
-  const rooms = await service.getRooms(req.user!.userId);
-  res.json({ status: 'success', data: rooms });
+  const result = await service.getRooms(req.user!.userId, req.query);
+  res.json({ status: 'success', ...result });
 });
 
 export const getMessages = asyncHandler(async (req: Request, res: Response) => {

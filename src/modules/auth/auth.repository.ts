@@ -20,7 +20,9 @@ export class AuthRepository {
         role: data.role,
         program: data.program,
         birthDate: data.birthDate,
-        consentGiven: data.consentGiven,
+        phone: data.phone,
+        idDocument: data.idDocument,
+        sex: data.sex,
         preferences: { create: { language: data.language } },
       },
       select: {
@@ -70,5 +72,33 @@ export class AuthRepository {
 
   async markEmailVerified(userId: string) {
     return prisma.user.update({ where: { id: userId }, data: { emailVerified: true } });
+  }
+
+  async findLoginAttempt(userId: string) {
+    return prisma.loginAttempt.findUnique({ where: { userId } });
+  }
+
+  async incrementLoginAttempts(userId: string, lockedUntil: Date | null) {
+    return prisma.loginAttempt.upsert({
+      where: { userId },
+      create: { userId, attempts: 1, lockedUntil },
+      update: { attempts: { increment: 1 }, lockedUntil },
+    });
+  }
+
+  async resetLoginAttempts(userId: string) {
+    return prisma.loginAttempt.deleteMany({ where: { userId } });
+  }
+
+  async createLoginHistory(userId: string, ip: string, userAgent?: string) {
+    return prisma.loginHistory.create({ data: { userId, ip, userAgent } });
+  }
+
+  async findLoginHistory(userId: string) {
+    return prisma.loginHistory.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
   }
 }

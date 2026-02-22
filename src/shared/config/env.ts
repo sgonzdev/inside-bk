@@ -29,6 +29,8 @@ const envSchema = z.object({
   S3_BUCKET: z.string().default('insideout'),
   S3_REGION: z.string().default('us-east-1'),
   S3_PUBLIC_URL: z.string().url(),
+  LOGIN_MAX_ATTEMPTS: z.coerce.number().default(5),
+  LOGIN_LOCK_MINUTES: z.coerce.number().default(15),
   EMAIL_VERIFICATION_EXPIRES_H: z.coerce.number().default(24),
   RESEND_API_KEY: z.string().min(1),
   EMAIL_FROM: z.string().default('InsideOut <noreply@insideoutexpressions.com>'),

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import * as codes from '../../shared/errors/error-codes';
-import { PROGRAMS, ROLES, LANGUAGES } from '../../shared/config/enums';
+import { PROGRAMS, ROLES, LANGUAGES, SEXES } from '../../shared/config/enums';
 
 export const registerSchema = z.object({
   email: z.string().email(codes.EMAIL_INVALID).refine(
@@ -18,7 +18,9 @@ export const registerSchema = z.object({
   lastName: z.string().min(1, codes.FIELD_REQUIRED),
   role: z.enum(ROLES).default('STUDENT'),
   language: z.enum(LANGUAGES).default('ES'),
-  consentGiven: z.literal(true, { message: codes.CONSENT_REQUIRED }),
+  phone: z.string().min(7).optional(),
+  idDocument: z.string().min(5).optional(),
+  sex: z.enum(SEXES).optional(),
   program: z.enum(PROGRAMS).optional(),
   birthDate: z.coerce.date().refine(
     (date) => {

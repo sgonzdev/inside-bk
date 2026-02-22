@@ -29,4 +29,8 @@ export class AppError extends Error {
   static conflict(code: string) {
     return new AppError(409, code);
   }
+
+  static locked(code: string) {
+    return new AppError(423, code);
+  }
 }

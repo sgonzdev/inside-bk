@@ -40,3 +40,9 @@ enum TokenType {
   EMAIL_VERIFICATION
   PASSWORD_RESET
 }
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}

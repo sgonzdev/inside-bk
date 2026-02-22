@@ -71,22 +71,40 @@ export class AuthService {
     await this.repo.deleteVerificationToken(record.id);
   }
 
-  async login(data: LoginInput) {
+  async login(data: LoginInput, ip: string, userAgent?: string) {
     const user = await this.repo.findByEmail(data.email);
-    if (!user || !(await bcrypt.compare(data.password, user.password))) {
+
+    // Check lock before verifying password (avoid timing attacks revealing user existence)
+    if (user) {
+      const attempt = await this.repo.findLoginAttempt(user.id);
+      if (attempt?.lockedUntil && attempt.lockedUntil > new Date()) {
+        throw AppError.locked(codes.AUTH_ACCOUNT_LOCKED);
+      }
+    }
+
+    const validPassword = user && await bcrypt.compare(data.password, user.password);
+
+    if (!user || !validPassword) {
+      if (user) {
+        const attempt = await this.repo.findLoginAttempt(user.id);
+        const newAttempts = (attempt?.attempts ?? 0) + 1;
+        const lockedUntil = newAttempts >= env.LOGIN_MAX_ATTEMPTS
+          ? new Date(Date.now() + env.LOGIN_LOCK_MINUTES * 60 * 1000)
+          : null;
+        await this.repo.incrementLoginAttempts(user.id, lockedUntil);
+      }
       throw AppError.unauthorized(codes.AUTH_INVALID_CREDENTIALS);
     }
 
     if (!user.emailVerified) throw AppError.forbidden(codes.AUTH_EMAIL_NOT_VERIFIED);
 
-    const payload = { userId: user.id, role: user.role };
+    // Successful login — reset attempts and record history
+    await this.repo.resetLoginAttempts(user.id);
+    await this.repo.createLoginHistory(user.id, ip, userAgent);
 
-    const accessToken = jwt.sign(payload, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN,
-    } as SignOptions);
-    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-      expiresIn: env.JWT_REFRESH_EXPIRES_IN,
-    } as SignOptions);
+    const payload = { userId: user.id, role: user.role };
+    const accessToken = jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as SignOptions);
+    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN } as SignOptions);
 
     const expiresAt = parseExpiry(env.JWT_REFRESH_EXPIRES_IN);
     await this.repo.saveRefreshToken(refreshToken, user.id, expiresAt);

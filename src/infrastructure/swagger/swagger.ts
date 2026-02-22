@@ -39,15 +39,17 @@ const spec = {
       // Auth
       RegisterBody: {
         type: 'object',
-        required: ['email', 'password', 'firstName', 'lastName', 'consentGiven'],
+        required: ['email', 'password', 'firstName', 'lastName'],
         properties: {
           email: { type: 'string', format: 'email' },
           password: { type: 'string', minLength: 8 },
           firstName: { type: 'string' },
           lastName: { type: 'string' },
           role: { $ref: '#/components/schemas/Role' },
-          language: { type: 'string', enum: ['ES', 'EN'], default: 'ES', description: 'Idioma preferido del usuario' },
-          consentGiven: { type: 'boolean', enum: [true] },
+          sex: { type: 'string', enum: ['MALE', 'FEMALE', 'OTHER'] },
+          phone: { type: 'string', example: '3001234567' },
+          idDocument: { type: 'string', example: '1234567890' },
+          language: { type: 'string', enum: ['ES', 'EN'], default: 'ES' },
           program: { $ref: '#/components/schemas/Program' },
           birthDate: { type: 'string', format: 'date', example: '2000-05-20' },
         },
@@ -211,6 +213,74 @@ const spec = {
         },
       },
 
+      // Consent
+      SignConsentBody: {
+        type: 'object',
+        required: ['signature'],
+        properties: {
+          signature: {
+            type: 'string',
+            pattern: '^data:image/(png|jpeg|webp);base64,',
+            description: 'Firma en formato data URI base64 (máx 500 KB)',
+            example: 'data:image/png;base64,iVBORw0KGgo...',
+          },
+          guardianName: {
+            type: 'string',
+            minLength: 1,
+            description: 'Nombre completo del acudiente. Obligatorio si el usuario tiene menos de 18 años según su birthDate registrado.',
+          },
+          guardianPhone: {
+            type: 'string',
+            minLength: 7,
+            description: 'Teléfono del acudiente. Obligatorio si el usuario tiene menos de 18 años según su birthDate registrado.',
+          },
+        },
+      },
+      ConsentRecord: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          storageKey: { type: 'string', example: 'consents/uuid.pdf' },
+          signedAt: { type: 'string', format: 'date-time' },
+          ip: { type: 'string', example: '192.168.1.1' },
+          guardianName: { type: 'string', nullable: true },
+          guardianPhone: { type: 'string', nullable: true },
+          url: { type: 'string', description: 'URL prefirmada temporal para descargar el PDF (expira en 1 hora)' },
+        },
+      },
+      ConsentRecordWithUser: {
+        allOf: [
+          { $ref: '#/components/schemas/ConsentRecord' },
+          {
+            type: 'object',
+            properties: {
+              user: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  firstName: { type: 'string' },
+                  lastName: { type: 'string' },
+                  email: { type: 'string' },
+                  idDocument: { type: 'string', nullable: true },
+                },
+              },
+            },
+          },
+        ],
+      },
+
+      // Pagination
+      PaginatedMeta: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', example: 1 },
+          limit: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 100 },
+          totalPages: { type: 'integer', example: 5 },
+        },
+      },
+
       // Enums
       EnumsResponse: {
         type: 'object',
@@ -284,6 +354,7 @@ const spec = {
           '200': { description: 'Login exitoso', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { $ref: '#/components/schemas/AuthTokens' } } } } } },
           '401': { description: 'Credenciales inválidas (AUTH_INVALID_CREDENTIALS)' },
           '403': { description: 'Correo no verificado (AUTH_EMAIL_NOT_VERIFIED)' },
+          '423': { description: 'Cuenta bloqueada por demasiados intentos fallidos (AUTH_ACCOUNT_LOCKED)' },
         },
       },
     },
@@ -345,12 +416,33 @@ const spec = {
     },
 
     // ── Diary ─────────────────────────────────────────────────
+    '/diary/all': {
+      get: {
+        tags: ['Diary'],
+        summary: 'Listar entradas de todos los usuarios (solo PROFESSIONAL)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Buscar por título o correo del autor' },
+        ],
+        responses: {
+          '200': { description: 'Lista paginada de entradas con datos del usuario' },
+          '403': { description: 'Solo accesible por PROFESSIONAL' },
+        },
+      },
+    },
     '/diary': {
       get: {
         tags: ['Diary'],
-        summary: 'Listar entradas del diario',
+        summary: 'Listar mis entradas del diario',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Lista de entradas' }, '401': { description: 'No autenticado' } },
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Buscar por título' },
+        ],
+        responses: { '200': { description: 'Lista paginada de entradas' }, '401': { description: 'No autenticado' } },
       },
       post: {
         tags: ['Diary'],
@@ -416,7 +508,11 @@ const spec = {
         tags: ['Emotions'],
         summary: 'Historial de emociones del usuario autenticado',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Lista de logs' } },
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+        ],
+        responses: { '200': { description: 'Lista paginada de logs' } },
       },
     },
     '/emotions/stats': {
@@ -455,7 +551,12 @@ const spec = {
         tags: ['Chat'],
         summary: 'Listar salas del usuario',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Lista de salas' } },
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Buscar por nombre de sala' },
+        ],
+        responses: { '200': { description: 'Lista paginada de salas' } },
       },
     },
     '/chat/rooms/{roomId}/messages': {
@@ -485,7 +586,11 @@ const spec = {
         tags: ['Notifications'],
         summary: 'Listar notificaciones del usuario',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Lista de notificaciones' } },
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+        ],
+        responses: { '200': { description: 'Lista paginada de notificaciones' } },
       },
     },
     '/notifications/read-all': {
@@ -503,6 +608,96 @@ const spec = {
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         responses: { '200': { description: 'Notificación marcada' }, '404': { description: 'No encontrada' } },
+      },
+    },
+
+    // ── Consent ───────────────────────────────────────────────
+    '/consent': {
+      post: {
+        tags: ['Consent'],
+        summary: 'Firmar consentimiento informado',
+        description:
+          'El estudiante firma el consentimiento informado. ' +
+          'El backend detecta automáticamente si el usuario es menor de 18 años consultando su `birthDate` registrado. ' +
+          'Si es menor, `guardianName` y `guardianPhone` son obligatorios; si no, se ignoran aunque se envíen. ' +
+          'Se genera un PDF sellado con la firma, fecha, IP y datos del acudiente (si aplica) y se almacena en MinIO.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/SignConsentBody' } } },
+        },
+        responses: {
+          '201': {
+            description: 'Consentimiento firmado — PDF generado y almacenado',
+            content: { 'application/json': { schema: { properties: { status: { type: 'string', example: 'success' } } } } },
+          },
+          '400': {
+            description: 'Error de validación',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'error' },
+              code: { type: 'string', enum: ['CONSENT_GUARDIAN_INCOMPLETE', 'CONSENT_INVALID_SIGNATURE', 'CONSENT_SIGNATURE_TOO_LARGE'] },
+              message: { type: 'string' },
+            }}}},
+          },
+          '401': { description: 'No autenticado (AUTH_INVALID_TOKEN)' },
+          '403': { description: 'Solo accesible por STUDENT' },
+          '409': {
+            description: 'El usuario ya firmó el consentimiento',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'error' },
+              code: { type: 'string', example: 'CONSENT_ALREADY_SIGNED' },
+            }}}},
+          },
+        },
+      },
+      get: {
+        tags: ['Consent'],
+        summary: 'Listar todos los consentimientos (solo PROFESSIONAL)',
+        description: 'Retorna una lista paginada de todos los consentimientos firmados. Cada registro incluye una URL prefirmada temporal para descargar el PDF.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Buscar por correo o número de documento del usuario' },
+        ],
+        responses: {
+          '200': {
+            description: 'Lista paginada de consentimientos',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'success' },
+              data: { type: 'array', items: { $ref: '#/components/schemas/ConsentRecordWithUser' } },
+              meta: { $ref: '#/components/schemas/PaginatedMeta' },
+            }}}},
+          },
+          '401': { description: 'No autenticado' },
+          '403': { description: 'Solo accesible por PROFESSIONAL' },
+        },
+      },
+    },
+    '/consent/me': {
+      get: {
+        tags: ['Consent'],
+        summary: 'Obtener mi consentimiento firmado',
+        description: 'Retorna el consentimiento del usuario autenticado junto con una URL prefirmada para descargar el PDF.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Consentimiento encontrado',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'success' },
+              data: { $ref: '#/components/schemas/ConsentRecord' },
+            }}}},
+          },
+          '401': { description: 'No autenticado' },
+          '403': { description: 'Solo accesible por STUDENT' },
+          '404': {
+            description: 'El usuario aún no ha firmado el consentimiento',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'error' },
+              code: { type: 'string', example: 'CONSENT_NOT_FOUND' },
+            }}}},
+          },
+        },
       },
     },
 

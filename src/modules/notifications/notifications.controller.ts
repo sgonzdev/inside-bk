@@ -5,8 +5,8 @@ import { asyncHandler } from '../../shared/utils/async-handler';
 const service = new NotificationsService();
 
 export const getAll = asyncHandler(async (req: Request, res: Response) => {
-  const notifications = await service.getAll(req.user!.userId);
-  res.json({ status: 'success', data: notifications });
+  const result = await service.getAll(req.user!.userId, req.query);
+  res.json({ status: 'success', ...result });
 });
 
 export const markAsRead = asyncHandler(async (req: Request, res: Response) => {

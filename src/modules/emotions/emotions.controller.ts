@@ -15,8 +15,8 @@ export const logEmotion = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const getHistory = asyncHandler(async (req: Request, res: Response) => {
-  const logs = await service.getHistory(req.user!.userId);
-  res.json({ status: 'success', data: logs });
+  const result = await service.getHistory(req.user!.userId, req.query);
+  res.json({ status: 'success', ...result });
 });
 
 export const getStats = asyncHandler(async (req: Request, res: Response) => {

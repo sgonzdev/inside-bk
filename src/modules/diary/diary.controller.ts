@@ -5,8 +5,8 @@ import { asyncHandler } from '../../shared/utils/async-handler';
 const service = new DiaryService();
 
 export const getAll = asyncHandler(async (req: Request, res: Response) => {
-  const entries = await service.getAll(req.user!.userId);
-  res.json({ status: 'success', data: entries });
+  const result = await service.getAll(req.user!.userId, req.query);
+  res.json({ status: 'success', ...result });
 });
 
 export const getById = asyncHandler(async (req: Request, res: Response) => {
@@ -27,4 +27,9 @@ export const update = asyncHandler(async (req: Request, res: Response) => {
 export const remove = asyncHandler(async (req: Request, res: Response) => {
   await service.delete(req.params.id as string, req.user!.userId);
   res.status(204).send();
+});
+
+export const getAllForProfessional = asyncHandler(async (req: Request, res: Response) => {
+  const result = await service.getAllForProfessional(req.query);
+  res.json({ status: 'success', ...result });
 });

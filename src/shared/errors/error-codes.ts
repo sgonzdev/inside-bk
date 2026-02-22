@@ -3,7 +3,8 @@ export const AUTH_EMAIL_EXISTS        = 'AUTH_EMAIL_EXISTS';        // El email 
 export const AUTH_INVALID_CREDENTIALS = 'AUTH_INVALID_CREDENTIALS'; // Credenciales inválidas (email o contraseña incorrectos)
 export const AUTH_INVALID_TOKEN       = 'AUTH_INVALID_TOKEN';       // Token ausente, inválido o expirado
 export const AUTH_TOKEN_REUSE              = 'AUTH_TOKEN_REUSE';              // Reuso de refresh token detectado — sesiones revocadas
-export const AUTH_EMAIL_NOT_VERIFIED       = 'AUTH_EMAIL_NOT_VERIFIED';       // El email aún no ha sido verificado
+export const AUTH_EMAIL_NOT_VERIFIED       = 'AUTH_EMAIL_NOT_VERIFIED';
+export const AUTH_ACCOUNT_LOCKED           = 'AUTH_ACCOUNT_LOCKED';           // Cuenta bloqueada por demasiados intentos fallidos       // El email aún no ha sido verificado
 export const AUTH_INVALID_DOMAIN           = 'AUTH_INVALID_DOMAIN';           // Solo se permiten correos @fet.edu.co
 export const AUTH_VERIFICATION_TOKEN_INVALID = 'AUTH_VERIFICATION_TOKEN_INVALID'; // Token de verificación inválido o expirado
 export const AUTH_EMAIL_VERIFIED             = 'AUTH_EMAIL_VERIFIED';             // Correo verificado correctamente
@@ -47,6 +48,13 @@ export const NOTIFICATIONS_DISABLED = 'NOTIFICATIONS_DISABLED'; // El usuario ti
 
 // ── Users ────────────────────────────────────────────
 export const USER_NOT_FOUND = 'USER_NOT_FOUND';
+
+// ── Consent ───────────────────────────────────────────
+export const CONSENT_GUARDIAN_INCOMPLETE = 'CONSENT_GUARDIAN_INCOMPLETE'; // Se requiere nombre y telefono del acudiente
+export const CONSENT_ALREADY_SIGNED      = 'CONSENT_ALREADY_SIGNED';      // El usuario ya firmó el consentimiento
+export const CONSENT_NOT_FOUND           = 'CONSENT_NOT_FOUND';           // El consentimiento no existe
+export const CONSENT_INVALID_SIGNATURE   = 'CONSENT_INVALID_SIGNATURE';   // Formato de firma inválido
+export const CONSENT_SIGNATURE_TOO_LARGE = 'CONSENT_SIGNATURE_TOO_LARGE'; // La firma supera el tamaño máximo (500KB)
 
 // ── Upload ───────────────────────────────────────────
 export const UPLOAD_NO_FILE       = 'UPLOAD_NO_FILE';        // No se envió ningún archivo
