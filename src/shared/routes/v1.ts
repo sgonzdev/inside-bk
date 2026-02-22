@@ -11,6 +11,7 @@ import chatRoutes from "../../modules/chat/chat.routes";
 import notificationsRoutes from "../../modules/notifications/notifications.routes";
 import preferencesRoutes from "../../modules/preferences/preferences.routes";
 import uploadRoutes from "../../modules/upload/upload.routes";
+import { getWheel } from "../../modules/emotions/emotions.controller";
 
 const router = Router();
 
@@ -18,6 +19,7 @@ const router = Router();
 router.use("/auth", authRoutes);
 router.use("/enums", enumsRoutes);
 router.use("/consent", consentRoutes);
+router.get("/emotions/wheel", getWheel);
 
 // All routes below require verified email + signed consent
 router.use(authenticate, requireActive);

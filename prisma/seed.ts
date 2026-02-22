@@ -1,53 +1,32 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 const emotions = [
-  {
-    name: 'Joy',
-    color: '#FFD93D',
-    children: ['Gratitude', 'Excitement', 'Pride', 'Serenity', 'Hope'],
-  },
-  {
-    name: 'Sadness',
-    color: '#6EC6E6',
-    children: ['Loneliness', 'Grief', 'Disappointment', 'Melancholy', 'Helplessness'],
-  },
-  {
-    name: 'Anger',
-    color: '#E84545',
-    children: ['Frustration', 'Resentment', 'Irritation', 'Rage', 'Jealousy'],
-  },
-  {
-    name: 'Fear',
-    color: '#A45EDB',
-    children: ['Anxiety', 'Insecurity', 'Panic', 'Worry', 'Shame'],
-  },
-  {
-    name: 'Disgust',
-    color: '#7BC74D',
-    children: ['Contempt', 'Rejection', 'Aversion', 'Distrust', 'Boredom'],
-  },
+  { name: "HAPPY", color: "#FFD93D" },
+  { name: "SATISFIED", color: "#7BC74D" },
+  { name: "SAD", color: "#6EC6E6" },
+  { name: "DEPRESSED", color: "#808080" },
+  { name: "ANGRY", color: "#E84545" },
+  { name: "ANXIOUS", color: "#A45EDB" },
+  { name: "CONFUSED", color: "#FF8C00" },
 ];
 
 async function main() {
-  console.log('Seeding emotions...');
+  console.log("Seeding emotions...");
 
   for (const emotion of emotions) {
-    const parent = await prisma.emotion.upsert({
+    await prisma.emotion.upsert({
       where: { name: emotion.name },
       update: { color: emotion.color },
-      create: { name: emotion.name, color: emotion.color },
+      create: emotion,
     });
-
-    for (const childName of emotion.children) {
-      await prisma.emotion.upsert({
-        where: { name: childName },
-        update: { parentId: parent.id },
-        create: { name: childName, parentId: parent.id },
-      });
-    }
   }
+
+  // Remove any emotions not in the list above
+  await prisma.emotion.deleteMany({
+    where: { name: { notIn: emotions.map((e) => e.name) } },
+  });
 
   const count = await prisma.emotion.count();
   console.log(`Done! ${count} emotions in database.`);

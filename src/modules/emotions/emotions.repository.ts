@@ -4,31 +4,27 @@ import { Prisma } from "@prisma/client";
 
 export class EmotionsRepository {
   async findAllEmotions() {
-    return prisma.emotion.findMany({
-      include: { children: true },
-      where: { parentId: null },
-    });
+    return prisma.emotion.findMany({ orderBy: { name: "asc" } });
   }
 
   async findEmotionById(id: string) {
-    return prisma.emotion.findUnique({
-      where: { id },
-      include: { children: true },
-    });
+    return prisma.emotion.findUnique({ where: { id } });
   }
 
   async createLog(
     userId: string,
     data: LogEmotionInput & { aiFeedback?: string },
   ) {
-    return prisma.emotionLog.create({
-      data: { userId, ...data },
+    const log = await prisma.emotionLog.create({
+      data: { userId, emotionId: data.emotionId, aiFeedback: data.aiFeedback },
       include: { emotion: true },
     });
+    const { emotionId: _, ...rest } = log;
+    return rest;
   }
 
   async findLogsByUser(userId: string, skip: number, take: number) {
-    const [data, total] = await Promise.all([
+    const [logs, total] = await Promise.all([
       prisma.emotionLog.findMany({
         where: { userId },
         include: { emotion: true },
@@ -38,6 +34,7 @@ export class EmotionsRepository {
       }),
       prisma.emotionLog.count({ where: { userId } }),
     ]);
+    const data = logs.map(({ emotionId: _, ...rest }) => rest);
     return { data, total };
   }
 

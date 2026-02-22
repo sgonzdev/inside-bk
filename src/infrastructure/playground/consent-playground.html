@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Consentimiento — InsideOut</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0f1117;color:#e2e8f0;font-family:system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+    header{background:#1a1d27;border-bottom:1px solid #2a2d3a;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+    header h1{font-size:1.1rem;color:#a78bfa;font-weight:700}
+    .tag{font-size:11px;background:#2a2d3a;color:#a78bfa;padding:2px 10px;border-radius:20px}
+    .auth-bar{background:#12151f;border-bottom:1px solid #2a2d3a;padding:10px 24px;display:flex;gap:10px;align-items:center}
+    .auth-bar input{flex:1;background:#1a1d27;border:1px solid #2a2d3a;color:#e2e8f0;padding:8px 12px;border-radius:6px;font-size:13px}
+    .auth-bar input:focus{outline:none;border-color:#a78bfa}
+    main{display:flex;flex:1;overflow:hidden}
+    .panel{width:480px;min-width:480px;border-right:1px solid #2a2d3a;display:flex;flex-direction:column;overflow-y:auto;padding:20px;gap:16px}
+    .panel-right{flex:1;padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+    label{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px}
+    input[type=text]{width:100%;background:#12151f;border:1px solid #2a2d3a;color:#e2e8f0;padding:8px 12px;border-radius:6px;font-size:13px}
+    input[type=text]:focus{outline:none;border-color:#a78bfa}
+    .section-title{font-size:11px;text-transform:uppercase;color:#64748b;letter-spacing:1px;margin-bottom:4px}
+    .btn{width:100%;padding:9px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+    .btn-purple{background:#7c3aed;color:#fff}.btn-purple:hover{background:#6d28d9}
+    .btn-gray{background:#1e2130;color:#94a3b8;border:1px solid #2a2d3a}.btn-gray:hover{background:#2a2d3a}
+    canvas{width:100%;height:160px;background:#12151f;border:1px solid #2a2d3a;border-radius:8px;cursor:crosshair;touch-action:none;display:block}
+    .guardian-section{display:none;flex-direction:column;gap:10px;background:#1a1d27;border:1px solid #f59e0b44;border-radius:8px;padding:12px}
+    .guardian-section.visible{display:flex}
+    .warning{font-size:11px;color:#fbbf24;margin-bottom:4px}
+    .checkbox-row{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#e2e8f0;user-select:none}
+    .checkbox-row input[type=checkbox]{width:16px;height:16px;accent-color:#a78bfa;cursor:pointer}
+    #toast{position:fixed;bottom:20px;right:20px;background:#1e2130;border:1px solid #2a2d3a;color:#e2e8f0;padding:10px 16px;border-radius:8px;font-size:13px;display:none;z-index:999}
+    #toast.ok{border-color:#4ade80;color:#4ade80}
+    #toast.err{border-color:#f87171;color:#f87171}
+    .divider{border:none;border-top:1px solid #2a2d3a}
+    .consent-text{background:#12151f;border:1px solid #2a2d3a;border-radius:8px;padding:16px;font-size:11px;color:#94a3b8;line-height:1.8;max-height:280px;overflow-y:auto}
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📋 Consentimiento Informado</h1>
+  <span class="tag">Playground</span>
+</header>
+
+<div class="auth-bar">
+  <input type="text" id="token" placeholder="Pega tu accessToken JWT aquí..."/>
+</div>
+
+<main>
+  <div class="panel">
+    <p class="section-title">Texto del consentimiento</p>
+    <div class="consent-text">
+      Yo <b>[nombre]</b> con número de documento <b>[documento]</b> perteneciente al programa de <b>[programa]</b>
+      en representación de <b>[sí mismo / mis padres]</b> en la FET dejo mi expreso consentimiento para que en caso
+      de ser necesario pueda recibir el acompañamiento psicológico que ha sido propuesto por el profesional que me asiste,
+      cuyos encuentros tendrán variación según la naturaleza de mi situación y necesidad, así como la posible inexistencia
+      de resultados positivos y la indicación de interconsultas con otros profesionales de la salud en caso de ser
+      necesarias.<br/><br/>
+      Además, he sido informado de que la continuidad del acompañamiento es de mi entera responsabilidad y que luego de
+      dos ausentes consecutivos, sin aviso, en citas programadas, se considerará alta por abandono.<br/><br/>
+      Así mismo se me aclara que los encuentros por acompañamiento deben ser confirmados por medio del correo compartido
+      por el profesional y la puntualidad al espacio debe ser prioridad.<br/><br/>
+      Toda la información compartida con el profesional no saldrá del espacio terapéutico, teniendo como salvedad
+      aquella que implique riesgo de vida para el paciente y/o para terceros.
+    </div>
+
+    <hr class="divider"/>
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="is-minor" onchange="toggleGuardian()"/>
+      Soy menor de 18 años
+    </label>
+
+    <div class="guardian-section" id="guardian-section">
+      <p class="warning">⚠️ Datos del acudiente obligatorios</p>
+      <div>
+        <label>Nombre del acudiente *</label>
+        <input type="text" id="guardian-name" placeholder="Nombre completo"/>
+      </div>
+      <div>
+        <label>Teléfono del acudiente *</label>
+        <input type="text" id="guardian-phone" placeholder="3001234567"/>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <p class="section-title">Firma digital</p>
+    <label style="margin-bottom:6px">Dibuja tu firma en el recuadro:</label>
+    <canvas id="sig-canvas"></canvas>
+    <button class="btn btn-gray" style="margin-top:6px" onclick="clearCanvas()">Limpiar firma</button>
+
+    <button class="btn btn-purple" onclick="sign()">Firmar consentimiento</button>
+  </div>
+
+  <div class="panel-right">
+    <p class="section-title">Respuesta del servidor</p>
+    <pre id="response-box" style="background:#12151f;border:1px solid #2a2d3a;border-radius:8px;padding:14px;font-size:11px;color:#94a3b8;overflow-x:auto;white-space:pre-wrap;min-height:120px">—</pre>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+  const API = '/api/v1';
+
+  // Restaurar token
+  const saved = localStorage.getItem('io_token');
+  if (saved) document.getElementById('token').value = saved;
+  document.getElementById('token').addEventListener('input', e => localStorage.setItem('io_token', e.target.value));
+
+  const token = () => document.getElementById('token').value.trim();
+  const authHeaders = () => ({ 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' });
+
+  function toast(msg, ok = true) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = ok ? 'ok' : 'err'; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3500);
+  }
+
+  function toggleGuardian() {
+    const minor = document.getElementById('is-minor').checked;
+    document.getElementById('guardian-section').classList.toggle('visible', minor);
+  }
+
+  // ── Canvas firma ─────────────────────────────────────────
+  const canvas = document.getElementById('sig-canvas');
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    ctx.strokeStyle = '#a78bfa';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
+  }
+
+  canvas.addEventListener('mousedown',  e => { drawing = true; ctx.beginPath(); const p = pos(e); ctx.moveTo(p.x, p.y); });
+  canvas.addEventListener('mousemove',  e => { if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+  canvas.addEventListener('mouseup',    () => drawing = false);
+  canvas.addEventListener('mouseleave', () => drawing = false);
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; ctx.beginPath(); const p = pos(e); ctx.moveTo(p.x, p.y); });
+  canvas.addEventListener('touchmove',  e => { e.preventDefault(); if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+  canvas.addEventListener('touchend',   () => drawing = false);
+
+  function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function canvasIsEmpty() {
+    return !ctx.getImageData(0, 0, canvas.width, canvas.height).data.some(v => v !== 0);
+  }
+
+  // ── Firmar ───────────────────────────────────────────────
+  async function sign() {
+    if (!token()) return toast('Pega tu token primero', false);
+    if (canvasIsEmpty()) return toast('Dibuja tu firma primero', false);
+
+    const isMinor = document.getElementById('is-minor').checked;
+    if (isMinor) {
+      const gn = document.getElementById('guardian-name').value.trim();
+      const gp = document.getElementById('guardian-phone').value.trim();
+      if (!gn || !gp) return toast('Datos del acudiente obligatorios', false);
+    }
+
+    const signature = canvas.toDataURL('image/png');
+    const body = {
+      signature,
+      ...(isMinor && {
+        guardianName: document.getElementById('guardian-name').value.trim(),
+        guardianPhone: document.getElementById('guardian-phone').value.trim(),
+      }),
+    };
+
+    const res = await fetch(`${API}/consent`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    const json = await res.json();
+    document.getElementById('response-box').textContent = JSON.stringify(json, null, 2);
+
+    if (!res.ok) return toast(`Error: ${json.code || json.message}`, false);
+    toast('Consentimiento firmado exitosamente');
+  }
+</script>
+</body>
+</html>

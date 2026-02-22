@@ -8,11 +8,11 @@ const router = Router();
 
 router.use(authenticate);
 router.get("/", controller.getAll);
+router.patch("/read-all", controller.markAllAsRead);
 router.patch(
   "/:id/read",
   validate(notificationParamsSchema, "params"),
   controller.markAsRead,
 );
-router.patch("/read-all", controller.markAllAsRead);
 
 export default router;

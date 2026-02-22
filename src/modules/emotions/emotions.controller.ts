@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { EmotionsService } from "./emotions.service";
 import { asyncHandler } from "../../shared/utils/async-handler";
+import { getPrediction } from "./prediction.service";
 
 const service = new EmotionsService();
 
@@ -20,6 +21,13 @@ export const getHistory = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const getStats = asyncHandler(async (req: Request, res: Response) => {
-  const stats = await service.getStats(req.query);
+  const stats = await service.getStats(req.user!.userId, req.query);
   res.json({ status: "success", data: stats });
 });
+
+export const getDailyPrediction = asyncHandler(
+  async (req: Request, res: Response) => {
+    const prediction = await getPrediction(req.user!.userId);
+    res.json({ status: "success", data: { prediction } });
+  },
+);

@@ -39,6 +39,11 @@ app.get("/chat-test", (_req, res) => {
     path.join(__dirname, "infrastructure/playground/chat-playground.html"),
   );
 });
+app.get("/consent-test", (_req, res) => {
+  res.sendFile(
+    path.join(__dirname, "infrastructure/playground/consent-playground.html"),
+  );
+});
 
 app.use(errorHandler);
 
