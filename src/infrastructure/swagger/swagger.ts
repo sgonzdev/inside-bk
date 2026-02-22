@@ -270,6 +270,26 @@ const spec = {
         ],
       },
 
+      // Media
+      MediaItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          storageKey: { type: 'string' },
+          mimeType: { type: 'string', example: 'image/png' },
+          size: { type: 'integer', example: 204800 },
+          url: { type: 'string', description: 'URL prefirmada (expira en 1h)' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      ReadReceipt: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string', format: 'uuid' },
+          readAt: { type: 'string', format: 'date-time' },
+        },
+      },
+
       // Pagination
       PaginatedMeta: {
         type: 'object',
@@ -483,6 +503,51 @@ const spec = {
       },
     },
 
+    // ── Diary Media ───────────────────────────────────────────
+    '/diary/{id}/media': {
+      post: {
+        tags: ['Diary'],
+        summary: 'Subir imagen o video a una entrada',
+        description: 'Adjunta un archivo a una entrada del diario. Soporta imágenes (máx 10 MB) y videos (máx 100 MB).',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file'],
+                properties: {
+                  file: { type: 'string', format: 'binary', description: 'Imagen (jpeg/png/webp/gif, máx 10 MB) o video (mp4/webm/mov, máx 100 MB)' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Media subida', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { $ref: '#/components/schemas/MediaItem' } } } } } },
+          '400': { description: 'Sin archivo, tipo inválido o tamaño excedido' },
+          '404': { description: 'Entrada no encontrada' },
+        },
+      },
+    },
+    '/diary/{id}/media/{mediaId}': {
+      delete: {
+        tags: ['Diary'],
+        summary: 'Eliminar archivo adjunto de una entrada',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'mediaId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '204': { description: 'Archivo eliminado de MinIO y DB' },
+          '404': { description: 'Media no encontrada' },
+        },
+      },
+    },
+
     // ── Emotions ──────────────────────────────────────────────
     '/emotions/wheel': {
       get: {
@@ -539,13 +604,21 @@ const spec = {
     '/chat/rooms': {
       post: {
         tags: ['Chat'],
-        summary: 'Crear sala de chat',
+        summary: 'Crear sala de chat (solo PROFESSIONAL)',
+        description: 'Solo los profesionales pueden crear salas. Los `participantIds` deben ser IDs de usuarios con rol STUDENT. El profesional queda incluido automáticamente.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string' }, participantIds: { type: 'array', items: { type: 'string', format: 'uuid' } } } } } },
+          content: { 'application/json': { schema: { type: 'object', required: ['participantIds'], properties: {
+            name: { type: 'string', description: 'Nombre opcional de la sala (para grupos)' },
+            participantIds: { type: 'array', items: { type: 'string', format: 'uuid' }, description: 'IDs de estudiantes a incluir' },
+          }}}},
         },
-        responses: { '201': { description: 'Sala creada' } },
+        responses: {
+          '201': { description: 'Sala creada' },
+          '400': { description: 'Algún participantId no es STUDENT (CHAT_PARTICIPANTS_MUST_BE_STUDENTS)' },
+          '403': { description: 'Solo accesible por PROFESSIONAL' },
+        },
       },
       get: {
         tags: ['Chat'],
@@ -559,24 +632,117 @@ const spec = {
         responses: { '200': { description: 'Lista paginada de salas' } },
       },
     },
+    '/chat/rooms/{roomId}/participants': {
+      post: {
+        tags: ['Chat'],
+        summary: 'Añadir participante a sala (solo PROFESSIONAL)',
+        description: 'El profesional puede añadir estudiantes a una sala existente en la que ya participa.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', required: ['userId'], properties: {
+            userId: { type: 'string', format: 'uuid', description: 'ID del estudiante a añadir' },
+          }}}},
+        },
+        responses: {
+          '201': { description: 'Participante añadido' },
+          '400': { description: 'El usuario no es STUDENT (CHAT_PARTICIPANTS_MUST_BE_STUDENTS)' },
+          '403': { description: 'Solo PROFESSIONAL que ya es participante de la sala' },
+          '404': { description: 'Sala o usuario no encontrado' },
+          '409': { description: 'El usuario ya es participante (CHAT_ALREADY_PARTICIPANT)' },
+        },
+      },
+    },
+
     '/chat/rooms/{roomId}/messages': {
       get: {
         tags: ['Chat'],
         summary: 'Obtener mensajes de una sala',
+        description: 'Retorna los últimos 50 mensajes. Cada mensaje incluye `media[]` y `receipts[]` (quién lo leyó).',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-        responses: { '200': { description: 'Lista de mensajes' } },
+        responses: { '200': { description: 'Lista de mensajes con media y receipts' } },
       },
       post: {
         tags: ['Chat'],
-        summary: 'Enviar mensaje',
+        summary: 'Enviar mensaje de texto',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { type: 'object', required: ['content'], properties: { content: { type: 'string' } } } } },
         },
-        responses: { '201': { description: 'Mensaje enviado' } },
+        responses: { '201': { description: 'Mensaje enviado. Se emite `chat:message` por WebSocket a los participantes.' } },
+      },
+    },
+    '/chat/rooms/{roomId}/messages/voice': {
+      post: {
+        tags: ['Chat'],
+        summary: 'Enviar nota de voz',
+        description: 'Sube un archivo de audio grabado (webm/ogg/mp4/mpeg/wav, máx 10 MB) como mensaje. Se emite `chat:message` por WebSocket con la URL prefirmada.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['audio'],
+                properties: {
+                  audio: { type: 'string', format: 'binary', description: 'Archivo de audio (webm, ogg, mp4, mpeg, wav — máx 10 MB)' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Nota de voz enviada' },
+          '400': { description: 'Sin archivo, tipo inválido o tamaño excedido' },
+          '403': { description: 'No es participante de la sala' },
+        },
+      },
+    },
+    '/chat/rooms/{roomId}/messages/media': {
+      post: {
+        tags: ['Chat'],
+        summary: 'Enviar imagen o video',
+        description: 'Sube un archivo a MinIO y crea un mensaje con media adjunta. Se emite `chat:message` por WebSocket con la URL prefirmada.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file'],
+                properties: {
+                  file: { type: 'string', format: 'binary', description: 'Imagen (jpeg/png/webp/gif, máx 10 MB) o video (mp4/webm/mov, máx 100 MB)' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Mensaje con media creado', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { properties: { media: { type: 'array', items: { $ref: '#/components/schemas/MediaItem' } } } } } } } } },
+          '400': { description: 'Sin archivo, tipo inválido o tamaño excedido' },
+          '403': { description: 'No es participante de la sala' },
+        },
+      },
+    },
+    '/chat/rooms/{roomId}/read': {
+      post: {
+        tags: ['Chat'],
+        summary: 'Marcar mensajes como leídos',
+        description: 'Marca como leídos todos los mensajes de la sala que no fueron enviados por el usuario autenticado. Emite `chat:read` por WebSocket a los participantes con `{ roomId, userId, readAt }`.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'Mensajes marcados', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { properties: { read: { type: 'integer', example: 5 } } } } } } } },
+          '403': { description: 'No es participante de la sala' },
+        },
       },
     },
 

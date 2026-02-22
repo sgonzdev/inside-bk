@@ -41,7 +41,9 @@ export const EMOTION_NOT_FOUND = 'EMOTION_NOT_FOUND'; // La emoción especificad
 export const DIARY_NOT_FOUND = 'DIARY_NOT_FOUND'; // La entrada de diario no existe
 
 // ── Chat ─────────────────────────────────────────────
-export const CHAT_NOT_PARTICIPANT = 'CHAT_NOT_PARTICIPANT'; // No es participante de esta sala de chat
+export const CHAT_NOT_PARTICIPANT             = 'CHAT_NOT_PARTICIPANT';             // No es participante de esta sala de chat
+export const CHAT_PARTICIPANTS_MUST_BE_STUDENTS = 'CHAT_PARTICIPANTS_MUST_BE_STUDENTS'; // Solo se pueden añadir estudiantes a una sala
+export const CHAT_ALREADY_PARTICIPANT        = 'CHAT_ALREADY_PARTICIPANT';         // El usuario ya es participante de esta sala
 
 // ── Notifications ────────────────────────────────────
 export const NOTIFICATIONS_DISABLED = 'NOTIFICATIONS_DISABLED'; // El usuario tiene las notificaciones desactivadas
@@ -57,7 +59,8 @@ export const CONSENT_INVALID_SIGNATURE   = 'CONSENT_INVALID_SIGNATURE';   // For
 export const CONSENT_SIGNATURE_TOO_LARGE = 'CONSENT_SIGNATURE_TOO_LARGE'; // La firma supera el tamaño máximo (500KB)
 
 // ── Upload ───────────────────────────────────────────
-export const UPLOAD_NO_FILE       = 'UPLOAD_NO_FILE';        // No se envió ningún archivo
-export const UPLOAD_INVALID_TYPE  = 'UPLOAD_INVALID_TYPE';   // Tipo de archivo no permitido
-export const UPLOAD_TOO_LARGE     = 'UPLOAD_TOO_LARGE';      // Archivo excede el tamaño máximo
-export const UPLOAD_FAILED        = 'UPLOAD_FAILED';         // Error al subir el archivo // El usuario no existe
+export const UPLOAD_NO_FILE        = 'UPLOAD_NO_FILE';        // No se envió ningún archivo
+export const UPLOAD_INVALID_TYPE   = 'UPLOAD_INVALID_TYPE';   // Tipo de archivo no permitido
+export const UPLOAD_TOO_LARGE      = 'UPLOAD_TOO_LARGE';      // Archivo excede el tamaño máximo
+export const UPLOAD_FAILED         = 'UPLOAD_FAILED';         // Error al subir el archivo
+export const UPLOAD_TOO_MANY_FILES = 'UPLOAD_TOO_MANY_FILES'; // Se superó el límite de archivos permitidos

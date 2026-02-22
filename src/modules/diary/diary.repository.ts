@@ -8,7 +8,7 @@ export class DiaryRepository {
       ...(search ? { title: { contains: search, mode: 'insensitive' as const } } : {}),
     };
     const [data, total] = await Promise.all([
-      prisma.diaryEntry.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take }),
+      prisma.diaryEntry.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take, include: { media: true } }),
       prisma.diaryEntry.count({ where }),
     ]);
     return { data, total };
@@ -24,7 +24,7 @@ export class DiaryRepository {
     const [data, total] = await Promise.all([
       prisma.diaryEntry.findMany({
         where, orderBy: { createdAt: 'desc' }, skip, take,
-        include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+        include: { user: { select: { id: true, firstName: true, lastName: true, email: true } }, media: true },
       }),
       prisma.diaryEntry.count({ where }),
     ]);
@@ -32,7 +32,7 @@ export class DiaryRepository {
   }
 
   async findById(id: string, userId: string) {
-    return prisma.diaryEntry.findFirst({ where: { id, userId } });
+    return prisma.diaryEntry.findFirst({ where: { id, userId }, include: { media: true } });
   }
 
   async create(userId: string, data: CreateDiaryInput) {

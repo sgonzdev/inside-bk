@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Diario — InsideOut</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0f1117;color:#e2e8f0;font-family:system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+    header{background:#1a1d27;border-bottom:1px solid #2a2d3a;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    header h1{font-size:1.1rem;color:#a78bfa;font-weight:700}
+    .tag{font-size:11px;background:#2a2d3a;color:#a78bfa;padding:2px 10px;border-radius:20px}
+
+    .auth-bar{background:#12151f;border-bottom:1px solid #2a2d3a;padding:10px 24px;display:flex;align-items:center;gap:10px}
+    .auth-bar input{flex:1;background:#1a1d27;border:1px solid #2a2d3a;color:#e2e8f0;padding:8px 12px;border-radius:6px;font-size:13px}
+    .auth-bar input:focus{outline:none;border-color:#a78bfa}
+
+    main{display:flex;flex:1;overflow:hidden}
+
+    /* Panel izquierdo — formulario */
+    .panel-left{width:360px;min-width:360px;border-right:1px solid #2a2d3a;display:flex;flex-direction:column;overflow-y:auto}
+    .section{padding:16px;border-bottom:1px solid #1e2130}
+    .section h2{font-size:11px;text-transform:uppercase;color:#64748b;letter-spacing:1px;margin-bottom:12px}
+    label{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;margin-top:10px}
+    input[type=text],textarea,select{width:100%;background:#12151f;border:1px solid #2a2d3a;color:#e2e8f0;padding:8px 12px;border-radius:6px;font-size:13px;font-family:inherit}
+    input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:#a78bfa}
+    textarea{resize:vertical;min-height:80px}
+
+    .btn{width:100%;padding:9px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;margin-top:10px}
+    .btn-purple{background:#7c3aed;color:#fff}.btn-purple:hover{background:#6d28d9}
+    .btn-gray{background:#1e2130;color:#94a3b8;border:1px solid #2a2d3a}.btn-gray:hover{background:#2a2d3a}
+    .btn-red{background:#7f1d1d;color:#fca5a5}.btn-red:hover{background:#991b1b}
+
+    .drop-zone{border:2px dashed #2a2d3a;border-radius:8px;padding:20px;text-align:center;cursor:pointer;margin-top:10px;color:#64748b;font-size:13px;transition:.2s}
+    .drop-zone:hover,.drop-zone.over{border-color:#a78bfa;color:#a78bfa}
+    .file-list{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+    .file-chip{background:#1e2130;border-radius:4px;padding:4px 8px;font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;align-items:center}
+    .file-chip button{background:none;border:none;color:#f87171;cursor:pointer;font-size:13px;padding:0 2px}
+
+    /* Panel derecho — lista entradas */
+    .panel-right{flex:1;display:flex;flex-direction:column;overflow:hidden}
+    .panel-right-header{padding:12px 20px;border-bottom:1px solid #2a2d3a;display:flex;justify-content:space-between;align-items:center}
+    .panel-right-header span{font-size:11px;text-transform:uppercase;color:#64748b;letter-spacing:1px}
+    #entries{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+    .entry-card{background:#1a1d27;border:1px solid #2a2d3a;border-radius:8px;padding:14px;cursor:pointer;transition:.15s}
+    .entry-card:hover{border-color:#a78bfa}
+    .entry-card.selected{border-color:#7c3aed;background:#1e1530}
+    .entry-title{font-size:14px;font-weight:600;color:#e2e8f0;margin-bottom:4px}
+    .entry-meta{font-size:11px;color:#64748b}
+    .entry-mood{display:inline-block;background:#2a2d3a;color:#a78bfa;font-size:10px;padding:1px 7px;border-radius:12px;margin-left:6px}
+    .entry-media{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .entry-media img,.entry-media video{width:70px;height:55px;object-fit:cover;border-radius:4px;border:1px solid #2a2d3a}
+
+    /* Toast */
+    #toast{position:fixed;bottom:20px;right:20px;background:#1e2130;border:1px solid #2a2d3a;color:#e2e8f0;padding:10px 16px;border-radius:8px;font-size:13px;display:none;z-index:999}
+    #toast.ok{border-color:#4ade80;color:#4ade80}
+    #toast.err{border-color:#f87171;color:#f87171}
+
+    .empty{color:#64748b;font-size:13px;text-align:center;padding:40px}
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📓 Diario Personal</h1>
+  <span class="tag">Playground</span>
+</header>
+
+<div class="auth-bar">
+  <input type="text" id="token" placeholder="Pega tu accessToken JWT aquí..." oninput="localStorage.setItem('io_token',this.value)"/>
+  <button class="btn btn-purple" style="width:auto;margin:0;padding:8px 16px" onclick="loadEntries()">Cargar entradas</button>
+</div>
+
+<main>
+  <!-- Formulario -->
+  <div class="panel-left">
+    <div class="section">
+      <h2>Nueva entrada</h2>
+      <label>Título *</label>
+      <input type="text" id="new-title" placeholder="Mi día de hoy..." />
+      <label>Contenido *</label>
+      <textarea id="new-content" placeholder="¿Qué pasó hoy?"></textarea>
+      <label>Estado de ánimo</label>
+      <input type="text" id="new-mood" placeholder="feliz, triste, ansioso..." />
+      <label>Adjuntos (imágenes/videos)</label>
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        📎 Arrastra o haz clic para seleccionar<br/>
+        <small>Imágenes (máx 5) · Videos (máx 2)</small>
+      </div>
+      <input type="file" id="file-input" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.odt,.ods,.zip" style="display:none" onchange="addFiles(this.files)"/>
+      <div class="file-list" id="file-list"></div>
+      <button class="btn btn-purple" onclick="createEntry()">Crear entrada</button>
+    </div>
+
+    <div class="section" id="detail-section" style="display:none">
+      <h2>Entrada seleccionada</h2>
+      <div id="detail-info" style="font-size:12px;color:#94a3b8;margin-bottom:10px"></div>
+      <label>Subir archivo a esta entrada</label>
+      <div class="drop-zone" id="drop-zone-detail" onclick="document.getElementById('file-detail').click()">
+        📎 Seleccionar archivo
+      </div>
+      <input type="file" id="file-detail" accept="image/*,video/*" style="display:none" onchange="uploadToEntry(this.files[0])"/>
+      <button class="btn btn-red" style="margin-top:10px" onclick="deleteEntry()">Eliminar entrada</button>
+    </div>
+  </div>
+
+  <!-- Lista de entradas -->
+  <div class="panel-right">
+    <div class="panel-right-header">
+      <span>Mis entradas</span>
+      <button class="btn btn-gray" style="width:auto;margin:0;padding:5px 12px" onclick="loadEntries()">↺ Actualizar</button>
+    </div>
+    <div id="entries"><div class="empty">Carga tu token y presiona "Cargar entradas"</div></div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+  const API = '/api/v1';
+  let selectedEntry = null;
+  let pendingFiles = [];
+
+  // Restaurar token guardado
+  const saved = localStorage.getItem('io_token');
+  if (saved) document.getElementById('token').value = saved;
+
+  const token = () => document.getElementById('token').value.trim();
+  const headers = () => ({ 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' });
+
+  function toast(msg, ok = true) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = ok ? 'ok' : 'err'; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 3000);
+  }
+
+  // Drag & drop
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); addFiles(e.dataTransfer.files); });
+
+  function addFiles(files) {
+    for (const f of files) pendingFiles.push(f);
+    renderFileList();
+  }
+
+  function renderFileList() {
+    const list = document.getElementById('file-list');
+    list.innerHTML = pendingFiles.map((f, i) => `
+      <div class="file-chip">
+        <span>${f.name} (${(f.size/1024).toFixed(1)} KB)</span>
+        <button onclick="removeFile(${i})">✕</button>
+      </div>`).join('');
+  }
+
+  function removeFile(i) { pendingFiles.splice(i, 1); renderFileList(); }
+
+  async function loadEntries() {
+    if (!token()) return toast('Pega tu token primero', false);
+    const res = await fetch(`${API}/diary?limit=50`, { headers: headers() });
+    const json = await res.json();
+    if (!res.ok) return toast(`Error: ${json.code}`, false);
+    renderEntries(json.data);
+  }
+
+  function renderEntries(entries) {
+    const el = document.getElementById('entries');
+    if (!entries.length) { el.innerHTML = '<div class="empty">No hay entradas aún</div>'; return; }
+    el.innerHTML = entries.map(e => `
+      <div class="entry-card${selectedEntry?.id === e.id ? ' selected' : ''}" onclick="selectEntry(${JSON.stringify(e).replace(/"/g, '&quot;')})">
+        <div class="entry-title">${e.title}${e.mood ? `<span class="entry-mood">${e.mood}</span>` : ''}</div>
+        <div class="entry-meta">${new Date(e.createdAt).toLocaleString('es-CO')}</div>
+        <div class="entry-meta" style="margin-top:4px;color:#94a3b8">${e.content.slice(0,100)}${e.content.length > 100 ? '...' : ''}</div>
+        ${e.media?.length ? `<div class="entry-media">${e.media.map(m =>
+          m.mimeType.startsWith('video')
+            ? `<video src="${m.url || ''}" controls></video>`
+            : `<img src="${m.url || ''}" alt="media" onerror="this.style.display='none'">`
+        ).join('')}</div>` : ''}
+      </div>`).join('');
+  }
+
+  function selectEntry(entry) {
+    selectedEntry = entry;
+    document.getElementById('detail-section').style.display = 'block';
+    document.getElementById('detail-info').innerHTML =
+      `<b>${entry.title}</b><br/>${new Date(entry.createdAt).toLocaleString('es-CO')}<br/>ID: <code>${entry.id}</code>`;
+    loadEntries();
+  }
+
+  async function createEntry() {
+    const title = document.getElementById('new-title').value.trim();
+    const content = document.getElementById('new-content').value.trim();
+    const mood = document.getElementById('new-mood').value.trim();
+    if (!title || !content) return toast('Título y contenido son obligatorios', false);
+    if (!token()) return toast('Pega tu token primero', false);
+
+    const res = await fetch(`${API}/diary`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ title, content, ...(mood && { mood }) }),
+    });
+    const json = await res.json();
+    if (!res.ok) return toast(`Error: ${json.code || json.message}`, false);
+
+    const entry = json.data;
+    toast('Entrada creada');
+    document.getElementById('new-title').value = '';
+    document.getElementById('new-content').value = '';
+    document.getElementById('new-mood').value = '';
+
+    // Subir archivos pendientes
+    for (const file of pendingFiles) {
+      await uploadMediaToEntry(entry.id, file);
+    }
+    pendingFiles = []; renderFileList();
+    loadEntries();
+  }
+
+  async function uploadMediaToEntry(entryId, file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${API}/diary/${entryId}/media`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token()}` },
+      body: fd,
+    });
+    const json = await res.json();
+    if (!res.ok) toast(`Media error: ${json.code}`, false);
+    else toast(`Archivo subido: ${file.name}`);
+  }
+
+  async function uploadToEntry(file) {
+    if (!file || !selectedEntry) return;
+    await uploadMediaToEntry(selectedEntry.id, file);
+    document.getElementById('file-detail').value = '';
+    loadEntries();
+  }
+
+  async function deleteEntry() {
+    if (!selectedEntry) return;
+    if (!confirm(`¿Eliminar "${selectedEntry.title}"?`)) return;
+    const res = await fetch(`${API}/diary/${selectedEntry.id}`, {
+      method: 'DELETE', headers: headers(),
+    });
+    if (res.status === 204) {
+      toast('Entrada eliminada');
+      selectedEntry = null;
+      document.getElementById('detail-section').style.display = 'none';
+      loadEntries();
+    } else {
+      const json = await res.json();
+      toast(`Error: ${json.code}`, false);
+    }
+  }
+</script>
+</body>
+</html>

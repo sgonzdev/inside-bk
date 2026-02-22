@@ -7,8 +7,23 @@ model DiaryEntry {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media DiaryMedia[]
 
   @@index([userId])
   @@map("diary_entries")
+}
+
+model DiaryMedia {
+  id         String   @id @default(uuid())
+  entryId    String   @map("entry_id")
+  storageKey String   @map("storage_key")
+  mimeType   String   @map("mime_type")
+  size       Int
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  entry DiaryEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@map("diary_media")
 }

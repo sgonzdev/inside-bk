@@ -27,6 +27,7 @@ model User {
   loginHistory        LoginHistory[]
   consent             Consent?
   preferences         UserPreferences?
+  readReceipts        MessageReadReceipt[]
 
   @@map("users")
 }

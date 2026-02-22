@@ -23,6 +23,12 @@ app.use('/docs', swaggerRouter);
 app.get('/ws-test', (_req, res) => {
   res.sendFile(path.join(__dirname, 'infrastructure/websocket/ws-playground.html'));
 });
+app.get('/diary-test', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'infrastructure/playground/diary-playground.html'));
+});
+app.get('/chat-test', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'infrastructure/playground/chat-playground.html'));
+});
 
 
 app.use(errorHandler);

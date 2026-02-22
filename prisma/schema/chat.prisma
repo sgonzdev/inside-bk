@@ -10,9 +10,9 @@ model ChatRoom {
 }
 
 model ChatParticipant {
-  id       String @id @default(uuid())
-  userId   String @map("user_id")
-  roomId   String @map("room_id")
+  id       String   @id @default(uuid())
+  userId   String   @map("user_id")
+  roomId   String   @map("room_id")
   joinedAt DateTime @default(now()) @map("joined_at")
 
   user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -26,12 +26,41 @@ model ChatMessage {
   id        String   @id @default(uuid())
   roomId    String   @map("room_id")
   senderId  String   @map("sender_id")
-  content   String
+  content   String   @default("")
   createdAt DateTime @default(now()) @map("created_at")
 
-  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  sender User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  room     ChatRoom            @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender   User                @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  media    ChatMessageMedia[]
+  receipts MessageReadReceipt[]
 
   @@index([roomId])
   @@map("chat_messages")
+}
+
+model ChatMessageMedia {
+  id         String   @id @default(uuid())
+  messageId  String   @map("message_id")
+  storageKey String   @map("storage_key")
+  mimeType   String   @map("mime_type")
+  size       Int
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("chat_message_media")
+}
+
+model MessageReadReceipt {
+  id        String   @id @default(uuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  readAt    DateTime @default(now()) @map("read_at")
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@map("message_read_receipts")
 }
