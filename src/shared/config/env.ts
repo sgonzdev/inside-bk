@@ -3,6 +3,8 @@ import { z } from 'zod';
 const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  APP_URL: z.string().url().default('http://localhost:3000'),
+  FRONTEND_URL: z.string().url().default('http://localhost:5173'),
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(10),
   JWT_EXPIRES_IN: z.string().default('15m'),
@@ -27,6 +29,7 @@ const envSchema = z.object({
   S3_BUCKET: z.string().default('insideout'),
   S3_REGION: z.string().default('us-east-1'),
   S3_PUBLIC_URL: z.string().url(),
+  EMAIL_VERIFICATION_EXPIRES_H: z.coerce.number().default(24),
   RESEND_API_KEY: z.string().min(1),
   EMAIL_FROM: z.string().default('InsideOut <noreply@insideoutexpressions.com>'),
 });

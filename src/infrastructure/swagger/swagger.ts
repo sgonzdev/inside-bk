@@ -46,6 +46,7 @@ const spec = {
           firstName: { type: 'string' },
           lastName: { type: 'string' },
           role: { $ref: '#/components/schemas/Role' },
+          language: { type: 'string', enum: ['ES', 'EN'], default: 'ES', description: 'Idioma preferido del usuario' },
           consentGiven: { type: 'boolean', enum: [true] },
           program: { $ref: '#/components/schemas/Program' },
           birthDate: { type: 'string', format: 'date', example: '2000-05-20' },
@@ -238,14 +239,36 @@ const spec = {
       post: {
         tags: ['Auth'],
         summary: 'Registrar usuario',
+        description: 'Solo se permiten correos @fet.edu.co. Se envía un correo de verificación al registrarse. El token expira en 24h.',
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/RegisterBody' } } },
         },
         responses: {
-          '201': { description: 'Usuario creado', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { $ref: '#/components/schemas/AuthTokens' } } } } } },
-          '400': { description: 'Validación fallida' },
-          '409': { description: 'Email ya registrado' },
+          '201': {
+            description: 'Registro exitoso — se envió correo de verificación',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'success' },
+              data: { properties: {
+                code: { type: 'string', example: 'AUTH_REGISTER_SUCCESS' },
+                user: { $ref: '#/components/schemas/User' },
+              }},
+            }}}},
+          },
+          '400': { description: 'Validación fallida o dominio no permitido (AUTH_INVALID_DOMAIN)' },
+          '409': { description: 'Email ya registrado y verificado (AUTH_EMAIL_EXISTS)' },
+        },
+      },
+    },
+    '/auth/verify-email': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Verificar correo electrónico',
+        description: 'Confirma la cuenta usando el token enviado al correo. El token expira en 24 horas.',
+        parameters: [{ name: 'token', in: 'query', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Token de verificación recibido por correo' }],
+        responses: {
+          '200': { description: 'Correo verificado (AUTH_EMAIL_VERIFIED)' },
+          '400': { description: 'Token inválido o expirado (AUTH_VERIFICATION_TOKEN_INVALID)' },
         },
       },
     },
@@ -259,7 +282,8 @@ const spec = {
         },
         responses: {
           '200': { description: 'Login exitoso', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { $ref: '#/components/schemas/AuthTokens' } } } } } },
-          '401': { description: 'Credenciales inválidas' },
+          '401': { description: 'Credenciales inválidas (AUTH_INVALID_CREDENTIALS)' },
+          '403': { description: 'Correo no verificado (AUTH_EMAIL_NOT_VERIFIED)' },
         },
       },
     },

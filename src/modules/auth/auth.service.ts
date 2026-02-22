@@ -1,10 +1,14 @@
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
+import { TokenType } from '.prisma/client/index';
 import { AuthRepository } from './auth.repository';
 import { RegisterInput, LoginInput } from './auth.validation';
 import { AppError } from '../../shared/errors/app-error';
 import * as codes from '../../shared/errors/error-codes';
 import { env } from '../../shared/config/env';
+import { sendEmail } from '../../infrastructure/email/email.service';
+import { verifyEmailTemplate } from '../../infrastructure/email/templates/verify-email.template';
 
 function parseExpiry(expiry: string): Date {
   const match = expiry.match(/^(\d+)([smhd])$/);
@@ -22,30 +26,49 @@ export class AuthService {
 
   async register(data: RegisterInput) {
     const existing = await this.repo.findByEmail(data.email);
-    if (existing) {
-      throw AppError.conflict(codes.AUTH_EMAIL_EXISTS);
-    }
 
-    const hashedPassword = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
-    const user = await this.repo.create({ ...data, password: hashedPassword });
+    if (existing?.emailVerified) throw AppError.conflict(codes.AUTH_EMAIL_EXISTS);
 
-    const payload = { userId: user.id, role: user.role };
+    // If registered but not verified, resend verification email
+    const user = existing ?? await this.repo.create({
+      ...data,
+      password: await bcrypt.hash(data.password, env.BCRYPT_ROUNDS),
+    });
 
-    const accessToken = jwt.sign(payload, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN,
-    } as SignOptions);
-    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-      expiresIn: env.JWT_REFRESH_EXPIRES_IN,
-    } as SignOptions);
+    // Delete any previous verification token and create a fresh one
+    await this.repo.deleteVerificationTokensByUser(user.id, TokenType.EMAIL_VERIFICATION);
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + env.EMAIL_VERIFICATION_EXPIRES_H * 60 * 60 * 1000);
+    await this.repo.createVerificationToken(token, user.id, TokenType.EMAIL_VERIFICATION, expiresAt);
 
-    const expiresAt = parseExpiry(env.JWT_REFRESH_EXPIRES_IN);
-    await this.repo.saveRefreshToken(refreshToken, user.id, expiresAt);
+    const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${token}`;
+    const language = data.language ?? 'ES';
+    const subject = language === 'EN'
+      ? 'Verify your email - InsideOut Expressions'
+      : 'Verifica tu correo - InsideOut Expressions';
+
+    await sendEmail({
+      to: user.email,
+      subject,
+      html: verifyEmailTemplate(user.firstName, verificationUrl, language, env.EMAIL_VERIFICATION_EXPIRES_H),
+    });
 
     return {
-      accessToken,
-      refreshToken,
+      code: codes.AUTH_REGISTER_SUCCESS,
       user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
     };
+  }
+
+  async verifyEmail(token: string) {
+    const record = await this.repo.findVerificationToken(token, TokenType.EMAIL_VERIFICATION);
+
+    if (!record || record.expiresAt < new Date()) {
+      if (record) await this.repo.deleteVerificationToken(record.id);
+      throw AppError.badRequest(codes.AUTH_VERIFICATION_TOKEN_INVALID);
+    }
+
+    await this.repo.markEmailVerified(record.userId);
+    await this.repo.deleteVerificationToken(record.id);
   }
 
   async login(data: LoginInput) {
@@ -53,6 +76,8 @@ export class AuthService {
     if (!user || !(await bcrypt.compare(data.password, user.password))) {
       throw AppError.unauthorized(codes.AUTH_INVALID_CREDENTIALS);
     }
+
+    if (!user.emailVerified) throw AppError.forbidden(codes.AUTH_EMAIL_NOT_VERIFIED);
 
     const payload = { userId: user.id, role: user.role };
 

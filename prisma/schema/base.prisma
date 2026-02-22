@@ -35,3 +35,8 @@ enum Theme {
   DARK
   SYSTEM
 }
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}

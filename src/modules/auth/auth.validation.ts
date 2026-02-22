@@ -1,9 +1,12 @@
 import { z } from 'zod';
 import * as codes from '../../shared/errors/error-codes';
-import { PROGRAMS, ROLES } from '../../shared/config/enums';
+import { PROGRAMS, ROLES, LANGUAGES } from '../../shared/config/enums';
 
 export const registerSchema = z.object({
-  email: z.string().email(codes.EMAIL_INVALID),
+  email: z.string().email(codes.EMAIL_INVALID).refine(
+    (e) => e.endsWith('@fet.edu.co'),
+    { message: codes.AUTH_INVALID_DOMAIN },
+  ),
   password: z
     .string()
     .min(8, codes.PASS_MIN_LENGTH)
@@ -14,6 +17,7 @@ export const registerSchema = z.object({
   firstName: z.string().min(1, codes.FIELD_REQUIRED),
   lastName: z.string().min(1, codes.FIELD_REQUIRED),
   role: z.enum(ROLES).default('STUDENT'),
+  language: z.enum(LANGUAGES).default('ES'),
   consentGiven: z.literal(true, { message: codes.CONSENT_REQUIRED }),
   program: z.enum(PROGRAMS).optional(),
   birthDate: z.coerce.date().refine(

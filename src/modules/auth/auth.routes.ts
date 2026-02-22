@@ -11,5 +11,6 @@ router.post('/register', authLimiter, validate(registerSchema), controller.regis
 router.post('/login', authLimiter, validate(loginSchema), controller.login);
 router.post('/refresh', authLimiter, validate(refreshSchema), controller.refresh);
 router.post('/logout', authenticate, validate(logoutSchema), controller.logout);
+router.get('/verify-email', controller.verifyEmail);
 
 export default router;

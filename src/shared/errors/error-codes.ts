@@ -2,7 +2,12 @@
 export const AUTH_EMAIL_EXISTS        = 'AUTH_EMAIL_EXISTS';        // El email ya está registrado
 export const AUTH_INVALID_CREDENTIALS = 'AUTH_INVALID_CREDENTIALS'; // Credenciales inválidas (email o contraseña incorrectos)
 export const AUTH_INVALID_TOKEN       = 'AUTH_INVALID_TOKEN';       // Token ausente, inválido o expirado
-export const AUTH_TOKEN_REUSE         = 'AUTH_TOKEN_REUSE';         // Reuso de refresh token detectado — sesiones revocadas
+export const AUTH_TOKEN_REUSE              = 'AUTH_TOKEN_REUSE';              // Reuso de refresh token detectado — sesiones revocadas
+export const AUTH_EMAIL_NOT_VERIFIED       = 'AUTH_EMAIL_NOT_VERIFIED';       // El email aún no ha sido verificado
+export const AUTH_INVALID_DOMAIN           = 'AUTH_INVALID_DOMAIN';           // Solo se permiten correos @fet.edu.co
+export const AUTH_VERIFICATION_TOKEN_INVALID = 'AUTH_VERIFICATION_TOKEN_INVALID'; // Token de verificación inválido o expirado
+export const AUTH_EMAIL_VERIFIED             = 'AUTH_EMAIL_VERIFIED';             // Correo verificado correctamente
+export const AUTH_REGISTER_SUCCESS           = 'AUTH_REGISTER_SUCCESS';           // Registro exitoso, correo de verificación enviado
 
 // ── Validation: password ─────────────────────────────
 export const PASS_MIN_LENGTH = 'PASS_MIN_LENGTH'; // La contraseña debe tener al menos 8 caracteres
