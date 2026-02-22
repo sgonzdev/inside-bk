@@ -27,6 +27,8 @@ const envSchema = z.object({
   S3_BUCKET: z.string().default('insideout'),
   S3_REGION: z.string().default('us-east-1'),
   S3_PUBLIC_URL: z.string().url(),
+  RESEND_API_KEY: z.string().min(1),
+  EMAIL_FROM: z.string().default('InsideOut <noreply@insideoutexpressions.com>'),
 });
 
 export type Env = z.infer<typeof envSchema>;
