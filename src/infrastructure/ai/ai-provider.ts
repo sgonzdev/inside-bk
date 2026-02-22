@@ -1,5 +1,5 @@
 export interface AIMessage {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -26,5 +26,9 @@ export interface AIResponse {
 }
 
 export interface AIProvider {
-  chat(systemPrompt: string, messages: AIMessage[], options?: AIOptions): Promise<AIResponse>;
+  chat(
+    systemPrompt: string,
+    messages: AIMessage[],
+    options?: AIOptions,
+  ): Promise<AIResponse>;
 }

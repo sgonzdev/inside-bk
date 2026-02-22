@@ -1,12 +1,9 @@
 model Emotion {
-  id       String @id @default(uuid())
-  name     String @unique
-  parentId String? @map("parent_id")
-  color    String?
+  id    String  @id @default(uuid())
+  name  String  @unique
+  color String?
 
-  parent   Emotion?  @relation("EmotionHierarchy", fields: [parentId], references: [id])
-  children Emotion[] @relation("EmotionHierarchy")
-  logs     EmotionLog[]
+  logs EmotionLog[]
 
   @@map("emotions")
 }
@@ -15,8 +12,6 @@ model EmotionLog {
   id         String   @id @default(uuid())
   userId     String   @map("user_id")
   emotionId  String   @map("emotion_id")
-  intensity  Int      @default(5)
-  note       String?
   aiFeedback String?  @map("ai_feedback")
   createdAt  DateTime @default(now()) @map("created_at")
 
@@ -25,4 +20,16 @@ model EmotionLog {
 
   @@index([userId])
   @@map("emotion_logs")
+}
+
+model EmotionalPrediction {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  prediction String
+  date       DateTime @map("date") // midnight of the day
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("emotional_predictions")
 }

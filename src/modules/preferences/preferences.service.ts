@@ -1,7 +1,11 @@
-import { PreferencesRepository } from './preferences.repository';
-import { UpdatePreferencesInput } from './preferences.validation';
+import { PreferencesRepository } from "./preferences.repository";
+import { UpdatePreferencesInput } from "./preferences.validation";
 
-const DEFAULTS = { language: 'ES' as const, theme: 'DARK' as const, notificationsEnabled: true };
+const DEFAULTS = {
+  language: "ES" as const,
+  theme: "DARK" as const,
+  notificationsEnabled: true,
+};
 
 export class PreferencesService {
   constructor(private readonly repo = new PreferencesRepository()) {}

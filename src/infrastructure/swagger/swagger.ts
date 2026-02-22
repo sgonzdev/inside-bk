@@ -30,8 +30,8 @@ const spec = {
       Program: {
         type: 'string',
         enum: [
-          'ENGINEERING', 'MEDICINE', 'LAW', 'PSYCHOLOGY', 'BUSINESS',
-          'ARTS', 'SCIENCES', 'EDUCATION', 'ARCHITECTURE', 'COMMUNICATIONS',
+          'SOFTWARE_ENGINEERING', 'ENVIRONMENTAL_ENGINEERING', 'OCCUPATIONAL_HEALTH_ADMIN',
+          'FOOD_ENGINEERING', 'ELECTRICAL_ENGINEERING', 'DIGITAL_BUSINESS_ADMIN',
         ],
       },
       Role: { type: 'string', enum: ['STUDENT', 'PROFESSIONAL'] },
@@ -39,14 +39,17 @@ const spec = {
       // Auth
       RegisterBody: {
         type: 'object',
-        required: ['email', 'password', 'firstName', 'lastName', 'consentGiven'],
+        required: ['email', 'password', 'firstName', 'lastName'],
         properties: {
           email: { type: 'string', format: 'email' },
           password: { type: 'string', minLength: 8 },
           firstName: { type: 'string' },
           lastName: { type: 'string' },
           role: { $ref: '#/components/schemas/Role' },
-          consentGiven: { type: 'boolean', enum: [true] },
+          sex: { type: 'string', enum: ['MALE', 'FEMALE', 'OTHER'] },
+          phone: { type: 'string', example: '3001234567' },
+          idDocument: { type: 'string', example: '1234567890' },
+          language: { type: 'string', enum: ['ES', 'EN'], default: 'ES' },
           program: { $ref: '#/components/schemas/Program' },
           birthDate: { type: 'string', format: 'date', example: '2000-05-20' },
         },
@@ -127,9 +130,8 @@ const spec = {
         type: 'object',
         properties: {
           id: { type: 'string', format: 'uuid' },
-          name: { type: 'string' },
+          name: { type: 'string', enum: ['HAPPY', 'SATISFIED', 'SAD', 'DEPRESSED', 'ANGRY', 'ANXIOUS', 'CONFUSED'] },
           color: { type: 'string', nullable: true },
-          children: { type: 'array', items: { $ref: '#/components/schemas/Emotion' } },
         },
       },
       LogEmotionBody: {
@@ -137,16 +139,12 @@ const spec = {
         required: ['emotionId'],
         properties: {
           emotionId: { type: 'string', format: 'uuid' },
-          intensity: { type: 'integer', minimum: 1, maximum: 10, default: 5 },
-          note: { type: 'string' },
         },
       },
       EmotionLog: {
         type: 'object',
         properties: {
           id: { type: 'string', format: 'uuid' },
-          intensity: { type: 'integer' },
-          note: { type: 'string', nullable: true },
           aiFeedback: { type: 'string', nullable: true },
           createdAt: { type: 'string', format: 'date-time' },
           emotion: { $ref: '#/components/schemas/Emotion' },
@@ -210,14 +208,99 @@ const spec = {
         },
       },
 
+      // Consent
+      SignConsentBody: {
+        type: 'object',
+        required: ['signature'],
+        properties: {
+          signature: {
+            type: 'string',
+            pattern: '^data:image/(png|jpeg|webp);base64,',
+            description: 'Firma en formato data URI base64 (máx 500 KB)',
+            example: 'data:image/png;base64,iVBORw0KGgo...',
+          },
+          guardianName: {
+            type: 'string',
+            minLength: 1,
+            description: 'Nombre completo del acudiente. Obligatorio si el usuario tiene menos de 18 años según su birthDate registrado.',
+          },
+          guardianPhone: {
+            type: 'string',
+            minLength: 7,
+            description: 'Teléfono del acudiente. Obligatorio si el usuario tiene menos de 18 años según su birthDate registrado.',
+          },
+        },
+      },
+      ConsentRecord: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          storageKey: { type: 'string', example: 'consents/uuid.pdf' },
+          signedAt: { type: 'string', format: 'date-time' },
+          ip: { type: 'string', example: '192.168.1.1' },
+          guardianName: { type: 'string', nullable: true },
+          guardianPhone: { type: 'string', nullable: true },
+          url: { type: 'string', description: 'URL prefirmada temporal para descargar el PDF (expira en 1 hora)' },
+        },
+      },
+      ConsentRecordWithUser: {
+        allOf: [
+          { $ref: '#/components/schemas/ConsentRecord' },
+          {
+            type: 'object',
+            properties: {
+              user: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  firstName: { type: 'string' },
+                  lastName: { type: 'string' },
+                  email: { type: 'string' },
+                  idDocument: { type: 'string', nullable: true },
+                },
+              },
+            },
+          },
+        ],
+      },
+
+      // Media
+      MediaItem: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          storageKey: { type: 'string' },
+          mimeType: { type: 'string', example: 'image/png' },
+          size: { type: 'integer', example: 204800 },
+          url: { type: 'string', description: 'URL prefirmada (expira en 1h)' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      ReadReceipt: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string', format: 'uuid' },
+          readAt: { type: 'string', format: 'date-time' },
+        },
+      },
+
+      // Pagination
+      PaginatedMeta: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', example: 1 },
+          limit: { type: 'integer', example: 20 },
+          total: { type: 'integer', example: 100 },
+          totalPages: { type: 'integer', example: 5 },
+        },
+      },
+
       // Enums
       EnumsResponse: {
         type: 'object',
         properties: {
-          programs: { type: 'array', items: { type: 'string' } },
-          roles: { type: 'array', items: { type: 'string' } },
-          languages: { type: 'array', items: { type: 'string' } },
-          themes: { type: 'array', items: { type: 'string' } },
+          programs: { type: 'array', items: { $ref: '#/components/schemas/Program' } },
         },
       },
     },
@@ -238,14 +321,36 @@ const spec = {
       post: {
         tags: ['Auth'],
         summary: 'Registrar usuario',
+        description: 'Solo se permiten correos @fet.edu.co. Se envía un correo de verificación al registrarse. El token expira en 24h.',
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { $ref: '#/components/schemas/RegisterBody' } } },
         },
         responses: {
-          '201': { description: 'Usuario creado', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { $ref: '#/components/schemas/AuthTokens' } } } } } },
-          '400': { description: 'Validación fallida' },
-          '409': { description: 'Email ya registrado' },
+          '201': {
+            description: 'Registro exitoso — se envió correo de verificación',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'success' },
+              data: { properties: {
+                code: { type: 'string', example: 'AUTH_REGISTER_SUCCESS' },
+                user: { $ref: '#/components/schemas/User' },
+              }},
+            }}}},
+          },
+          '400': { description: 'Validación fallida o dominio no permitido (AUTH_INVALID_DOMAIN)' },
+          '409': { description: 'Email ya registrado y verificado (AUTH_EMAIL_EXISTS)' },
+        },
+      },
+    },
+    '/auth/verify-email': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Verificar correo electrónico',
+        description: 'Confirma la cuenta usando el token enviado al correo. El token expira en 24 horas.',
+        parameters: [{ name: 'token', in: 'query', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Token de verificación recibido por correo' }],
+        responses: {
+          '200': { description: 'Correo verificado (AUTH_EMAIL_VERIFIED)' },
+          '400': { description: 'Token inválido o expirado (AUTH_VERIFICATION_TOKEN_INVALID)' },
         },
       },
     },
@@ -259,7 +364,9 @@ const spec = {
         },
         responses: {
           '200': { description: 'Login exitoso', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { $ref: '#/components/schemas/AuthTokens' } } } } } },
-          '401': { description: 'Credenciales inválidas' },
+          '401': { description: 'Credenciales inválidas (AUTH_INVALID_CREDENTIALS)' },
+          '403': { description: 'Correo no verificado (AUTH_EMAIL_NOT_VERIFIED)' },
+          '423': { description: 'Cuenta bloqueada por demasiados intentos fallidos (AUTH_ACCOUNT_LOCKED)' },
         },
       },
     },
@@ -321,12 +428,33 @@ const spec = {
     },
 
     // ── Diary ─────────────────────────────────────────────────
+    '/diary/all': {
+      get: {
+        tags: ['Diary'],
+        summary: 'Listar entradas de todos los usuarios (solo PROFESSIONAL)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Buscar por título o correo del autor' },
+        ],
+        responses: {
+          '200': { description: 'Lista paginada de entradas con datos del usuario' },
+          '403': { description: 'Solo accesible por PROFESSIONAL' },
+        },
+      },
+    },
     '/diary': {
       get: {
         tags: ['Diary'],
-        summary: 'Listar entradas del diario',
+        summary: 'Listar mis entradas del diario',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Lista de entradas' }, '401': { description: 'No autenticado' } },
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Buscar por título' },
+        ],
+        responses: { '200': { description: 'Lista paginada de entradas' }, '401': { description: 'No autenticado' } },
       },
       post: {
         tags: ['Diary'],
@@ -367,6 +495,51 @@ const spec = {
       },
     },
 
+    // ── Diary Media ───────────────────────────────────────────
+    '/diary/{id}/media': {
+      post: {
+        tags: ['Diary'],
+        summary: 'Subir imagen o video a una entrada',
+        description: 'Adjunta un archivo a una entrada del diario. Soporta imágenes (máx 10 MB) y videos (máx 100 MB).',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file'],
+                properties: {
+                  file: { type: 'string', format: 'binary', description: 'Imagen (jpeg/png/webp/gif, máx 10 MB) o video (mp4/webm/mov, máx 100 MB)' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Media subida', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { $ref: '#/components/schemas/MediaItem' } } } } } },
+          '400': { description: 'Sin archivo, tipo inválido o tamaño excedido' },
+          '404': { description: 'Entrada no encontrada' },
+        },
+      },
+    },
+    '/diary/{id}/media/{mediaId}': {
+      delete: {
+        tags: ['Diary'],
+        summary: 'Eliminar archivo adjunto de una entrada',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'id', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+          { name: 'mediaId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } },
+        ],
+        responses: {
+          '204': { description: 'Archivo eliminado de MinIO y DB' },
+          '404': { description: 'Media no encontrada' },
+        },
+      },
+    },
+
     // ── Emotions ──────────────────────────────────────────────
     '/emotions/wheel': {
       get: {
@@ -387,12 +560,37 @@ const spec = {
         responses: { '201': { description: 'Log creado con feedback de IA', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { $ref: '#/components/schemas/EmotionLog' } } } } } }, '404': { description: 'Emoción no encontrada' } },
       },
     },
+    '/emotions/prediction': {
+      get: {
+        tags: ['Emotions'],
+        summary: 'Predicción emocional del día (solo STUDENT)',
+        description: 'Genera una predicción emocional basada en los últimos registros de emociones y entradas de diario. Se genera una vez por día calendario y se reutiliza hasta la medianoche.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Predicción del día',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'success' },
+              data: { type: 'object', properties: {
+                prediction: { type: 'string', example: 'Hoy podrías sentirte un poco ansioso...' },
+              }},
+            }}}},
+          },
+          '401': { description: 'No autenticado' },
+          '403': { description: 'Solo accesible por STUDENT' },
+        },
+      },
+    },
     '/emotions/history': {
       get: {
         tags: ['Emotions'],
         summary: 'Historial de emociones del usuario autenticado',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Lista de logs' } },
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+        ],
+        responses: { '200': { description: 'Lista paginada de logs' } },
       },
     },
     '/emotions/stats': {
@@ -419,39 +617,145 @@ const spec = {
     '/chat/rooms': {
       post: {
         tags: ['Chat'],
-        summary: 'Crear sala de chat',
+        summary: 'Crear sala de chat (solo PROFESSIONAL)',
+        description: 'Solo los profesionales pueden crear salas. Los `participantIds` deben ser IDs de usuarios con rol STUDENT. El profesional queda incluido automáticamente.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
-          content: { 'application/json': { schema: { type: 'object', properties: { name: { type: 'string' }, participantIds: { type: 'array', items: { type: 'string', format: 'uuid' } } } } } },
+          content: { 'application/json': { schema: { type: 'object', required: ['participantIds'], properties: {
+            name: { type: 'string', description: 'Nombre opcional de la sala (para grupos)' },
+            participantIds: { type: 'array', items: { type: 'string', format: 'uuid' }, description: 'IDs de estudiantes a incluir' },
+          }}}},
         },
-        responses: { '201': { description: 'Sala creada' } },
+        responses: {
+          '201': { description: 'Sala creada' },
+          '400': { description: 'Algún participantId no es STUDENT (CHAT_PARTICIPANTS_MUST_BE_STUDENTS)' },
+          '403': { description: 'Solo accesible por PROFESSIONAL' },
+        },
       },
       get: {
         tags: ['Chat'],
         summary: 'Listar salas del usuario',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Lista de salas' } },
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Buscar por nombre de sala' },
+        ],
+        responses: { '200': { description: 'Lista paginada de salas' } },
       },
     },
+    '/chat/rooms/{roomId}/participants': {
+      post: {
+        tags: ['Chat'],
+        summary: 'Añadir participante a sala (solo PROFESSIONAL)',
+        description: 'El profesional puede añadir estudiantes a una sala existente en la que ya participa.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', required: ['userId'], properties: {
+            userId: { type: 'string', format: 'uuid', description: 'ID del estudiante a añadir' },
+          }}}},
+        },
+        responses: {
+          '201': { description: 'Participante añadido' },
+          '400': { description: 'El usuario no es STUDENT (CHAT_PARTICIPANTS_MUST_BE_STUDENTS)' },
+          '403': { description: 'Solo PROFESSIONAL que ya es participante de la sala' },
+          '404': { description: 'Sala o usuario no encontrado' },
+          '409': { description: 'El usuario ya es participante (CHAT_ALREADY_PARTICIPANT)' },
+        },
+      },
+    },
+
     '/chat/rooms/{roomId}/messages': {
       get: {
         tags: ['Chat'],
         summary: 'Obtener mensajes de una sala',
+        description: 'Retorna los últimos 50 mensajes. Cada mensaje incluye `media[]` y `receipts[]` (quién lo leyó).',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
-        responses: { '200': { description: 'Lista de mensajes' } },
+        responses: { '200': { description: 'Lista de mensajes con media y receipts' } },
       },
       post: {
         tags: ['Chat'],
-        summary: 'Enviar mensaje',
+        summary: 'Enviar mensaje de texto',
         security: [{ bearerAuth: [] }],
         parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { type: 'object', required: ['content'], properties: { content: { type: 'string' } } } } },
         },
-        responses: { '201': { description: 'Mensaje enviado' } },
+        responses: { '201': { description: 'Mensaje enviado. Se emite `chat:message` por WebSocket a los participantes.' } },
+      },
+    },
+    '/chat/rooms/{roomId}/messages/voice': {
+      post: {
+        tags: ['Chat'],
+        summary: 'Enviar nota de voz',
+        description: 'Sube un archivo de audio grabado (webm/ogg/mp4/mpeg/wav, máx 10 MB) como mensaje. Se emite `chat:message` por WebSocket con la URL prefirmada.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['audio'],
+                properties: {
+                  audio: { type: 'string', format: 'binary', description: 'Archivo de audio (webm, ogg, mp4, mpeg, wav — máx 10 MB)' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Nota de voz enviada' },
+          '400': { description: 'Sin archivo, tipo inválido o tamaño excedido' },
+          '403': { description: 'No es participante de la sala' },
+        },
+      },
+    },
+    '/chat/rooms/{roomId}/messages/media': {
+      post: {
+        tags: ['Chat'],
+        summary: 'Enviar imagen o video',
+        description: 'Sube un archivo a MinIO y crea un mensaje con media adjunta. Se emite `chat:message` por WebSocket con la URL prefirmada.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file'],
+                properties: {
+                  file: { type: 'string', format: 'binary', description: 'Imagen (jpeg/png/webp/gif, máx 10 MB) o video (mp4/webm/mov, máx 100 MB)' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Mensaje con media creado', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { properties: { media: { type: 'array', items: { $ref: '#/components/schemas/MediaItem' } } } } } } } } },
+          '400': { description: 'Sin archivo, tipo inválido o tamaño excedido' },
+          '403': { description: 'No es participante de la sala' },
+        },
+      },
+    },
+    '/chat/rooms/{roomId}/read': {
+      post: {
+        tags: ['Chat'],
+        summary: 'Marcar mensajes como leídos',
+        description: 'Marca como leídos todos los mensajes de la sala que no fueron enviados por el usuario autenticado. Emite `chat:read` por WebSocket a los participantes con `{ roomId, userId, readAt }`.',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'roomId', in: 'path', required: true, schema: { type: 'string', format: 'uuid' } }],
+        responses: {
+          '200': { description: 'Mensajes marcados', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { properties: { read: { type: 'integer', example: 5 } } } } } } } },
+          '403': { description: 'No es participante de la sala' },
+        },
       },
     },
 
@@ -461,7 +765,11 @@ const spec = {
         tags: ['Notifications'],
         summary: 'Listar notificaciones del usuario',
         security: [{ bearerAuth: [] }],
-        responses: { '200': { description: 'Lista de notificaciones' } },
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+        ],
+        responses: { '200': { description: 'Lista paginada de notificaciones' } },
       },
     },
     '/notifications/read-all': {
@@ -482,11 +790,101 @@ const spec = {
       },
     },
 
+    // ── Consent ───────────────────────────────────────────────
+    '/consent': {
+      post: {
+        tags: ['Consent'],
+        summary: 'Firmar consentimiento informado',
+        description:
+          'El estudiante firma el consentimiento informado. ' +
+          'El backend detecta automáticamente si el usuario es menor de 18 años consultando su `birthDate` registrado. ' +
+          'Si es menor, `guardianName` y `guardianPhone` son obligatorios; si no, se ignoran aunque se envíen. ' +
+          'Se genera un PDF sellado con la firma, fecha, IP y datos del acudiente (si aplica) y se almacena en MinIO.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/SignConsentBody' } } },
+        },
+        responses: {
+          '201': {
+            description: 'Consentimiento firmado — PDF generado y almacenado',
+            content: { 'application/json': { schema: { properties: { status: { type: 'string', example: 'success' } } } } },
+          },
+          '400': {
+            description: 'Error de validación',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'error' },
+              code: { type: 'string', enum: ['CONSENT_GUARDIAN_INCOMPLETE', 'CONSENT_INVALID_SIGNATURE', 'CONSENT_SIGNATURE_TOO_LARGE'] },
+              message: { type: 'string' },
+            }}}},
+          },
+          '401': { description: 'No autenticado (AUTH_INVALID_TOKEN)' },
+          '403': { description: 'Solo accesible por STUDENT' },
+          '409': {
+            description: 'El usuario ya firmó el consentimiento',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'error' },
+              code: { type: 'string', example: 'CONSENT_ALREADY_SIGNED' },
+            }}}},
+          },
+        },
+      },
+      get: {
+        tags: ['Consent'],
+        summary: 'Listar todos los consentimientos (solo PROFESSIONAL)',
+        description: 'Retorna una lista paginada de todos los consentimientos firmados. Cada registro incluye una URL prefirmada temporal para descargar el PDF.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          { name: 'search', in: 'query', schema: { type: 'string' }, description: 'Buscar por correo o número de documento del usuario' },
+        ],
+        responses: {
+          '200': {
+            description: 'Lista paginada de consentimientos',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'success' },
+              data: { type: 'array', items: { $ref: '#/components/schemas/ConsentRecordWithUser' } },
+              meta: { $ref: '#/components/schemas/PaginatedMeta' },
+            }}}},
+          },
+          '401': { description: 'No autenticado' },
+          '403': { description: 'Solo accesible por PROFESSIONAL' },
+        },
+      },
+    },
+    '/consent/me': {
+      get: {
+        tags: ['Consent'],
+        summary: 'Obtener mi consentimiento firmado',
+        description: 'Retorna el consentimiento del usuario autenticado junto con una URL prefirmada para descargar el PDF.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Consentimiento encontrado',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'success' },
+              data: { $ref: '#/components/schemas/ConsentRecord' },
+            }}}},
+          },
+          '401': { description: 'No autenticado' },
+          '403': { description: 'Solo accesible por STUDENT' },
+          '404': {
+            description: 'El usuario aún no ha firmado el consentimiento',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'error' },
+              code: { type: 'string', example: 'CONSENT_NOT_FOUND' },
+            }}}},
+          },
+        },
+      },
+    },
+
     // ── Enums ──────────────────────────────────────────────────
     '/enums': {
       get: {
         tags: ['Enums'],
-        summary: 'Obtener valores de enums (programas, roles, idiomas, temas)',
+        summary: 'Obtener programas académicos disponibles',
         responses: {
           '200': {
             description: 'Valores de enums',

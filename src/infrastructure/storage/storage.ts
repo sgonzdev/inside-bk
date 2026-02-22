@@ -6,14 +6,29 @@ import {
   CreateBucketCommand,
   HeadBucketCommand,
   PutBucketPolicyCommand,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { env } from '../../shared/config/env';
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { env } from "../../shared/config/env";
 
+// Cliente interno: usa S3_ENDPOINT (puede ser host Docker) para uploads/deletes
 const s3 = new S3Client({
   endpoint: env.S3_ENDPOINT,
   region: env.S3_REGION,
-  credentials: { accessKeyId: env.S3_ACCESS_KEY, secretAccessKey: env.S3_SECRET_KEY },
+  credentials: {
+    accessKeyId: env.S3_ACCESS_KEY,
+    secretAccessKey: env.S3_SECRET_KEY,
+  },
+  forcePathStyle: true,
+});
+
+// Cliente público: firma URLs con S3_PUBLIC_URL para que el navegador pueda accederlas
+const s3Public = new S3Client({
+  endpoint: env.S3_PUBLIC_URL,
+  region: env.S3_REGION,
+  credentials: {
+    accessKeyId: env.S3_ACCESS_KEY,
+    secretAccessKey: env.S3_SECRET_KEY,
+  },
   forcePathStyle: true,
 });
 
@@ -28,24 +43,35 @@ export async function ensureBucket() {
 
   // Lectura pública solo para avatars/*
   const policy = JSON.stringify({
-    Version: '2012-10-17',
+    Version: "2012-10-17",
     Statement: [
       {
-        Effect: 'Allow',
-        Principal: '*',
-        Action: ['s3:GetObject'],
+        Effect: "Allow",
+        Principal: "*",
+        Action: ["s3:GetObject"],
         Resource: [`arn:aws:s3:::${env.S3_BUCKET}/avatars/*`],
       },
     ],
   });
 
-  await s3.send(new PutBucketPolicyCommand({ Bucket: env.S3_BUCKET, Policy: policy }));
+  await s3.send(
+    new PutBucketPolicyCommand({ Bucket: env.S3_BUCKET, Policy: policy }),
+  );
   console.log(`Política pública aplicada a ${env.S3_BUCKET}/avatars/*`);
 }
 
-export async function uploadFile(key: string, body: Buffer, contentType: string) {
+export async function uploadFile(
+  key: string,
+  body: Buffer,
+  contentType: string,
+) {
   await s3.send(
-    new PutObjectCommand({ Bucket: env.S3_BUCKET, Key: key, Body: body, ContentType: contentType }),
+    new PutObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    }),
   );
   return `${env.S3_PUBLIC_URL}/${env.S3_BUCKET}/${key}`;
 }
@@ -55,7 +81,11 @@ export async function deleteFile(key: string) {
 }
 
 export async function getPresignedUrl(key: string, expiresIn = 3600) {
-  return getSignedUrl(s3, new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: key }), { expiresIn });
+  return getSignedUrl(
+    s3Public,
+    new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: key }),
+    { expiresIn },
+  );
 }
 
 export { s3 };

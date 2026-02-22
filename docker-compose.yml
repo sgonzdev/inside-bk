@@ -49,6 +49,22 @@ services:
         condition: service_healthy
     command: sh -c "npx prisma db push && npm run dev"
 
+  studio:
+    build: .
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    volumes:
+      - ./prisma:/app/prisma
+      - ./prisma.config.ts:/app/prisma.config.ts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: sh -c "npx prisma studio --port 5555 --hostname 0.0.0.0 --browser none"
+    profiles:
+      - dev
+
 volumes:
   postgres_data:
   minio_data:

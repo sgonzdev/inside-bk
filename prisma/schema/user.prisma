@@ -8,17 +8,27 @@ model User {
   program       Program?
   birthDate     DateTime? @map("birth_date")
   avatarUrl     String?   @map("avatar_url")
-  consentGiven  Boolean  @default(false) @map("consent_given")
-  createdAt     DateTime @default(now()) @map("created_at")
+  idDocument    String?   @map("id_document")
+  phone         String?
+  sex           Sex?
+  consentGiven   Boolean  @default(false) @map("consent_given")
+  emailVerified  Boolean  @default(false) @map("email_verified")
+  createdAt      DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  diaryEntries  DiaryEntry[]
-  emotionLogs   EmotionLog[]
+  diaryEntries         DiaryEntry[]
+  emotionLogs          EmotionLog[]
+  emotionalPredictions EmotionalPrediction[]
   sentMessages   ChatMessage[]    @relation("SentMessages")
   chatRooms      ChatParticipant[]
   notifications  Notification[]
-  refreshTokens  RefreshToken[]
-  preferences    UserPreferences?
+  refreshTokens       RefreshToken[]
+  verificationTokens  VerificationToken[]
+  loginAttempt        LoginAttempt?
+  loginHistory        LoginHistory[]
+  consent             Consent?
+  preferences         UserPreferences?
+  readReceipts        MessageReadReceipt[]
 
   @@map("users")
 }
@@ -48,4 +58,43 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+model LoginAttempt {
+  id          String    @id @default(uuid())
+  userId      String    @unique @map("user_id")
+  attempts    Int       @default(0)
+  lockedUntil DateTime? @map("locked_until")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("login_attempts")
+}
+
+model LoginHistory {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  ip        String
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("login_history")
+}
+
+model VerificationToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String    @map("user_id")
+  type      TokenType
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("verification_tokens")
 }

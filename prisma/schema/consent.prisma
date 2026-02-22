@@ -1,0 +1,13 @@
+model Consent {
+  id            String   @id @default(uuid())
+  userId        String   @unique @map("user_id")
+  storageKey    String   @map("storage_key")
+  signedAt      DateTime @default(now()) @map("signed_at")
+  ip            String
+  guardianName  String?  @map("guardian_name")
+  guardianPhone String?  @map("guardian_phone")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("consents")
+}

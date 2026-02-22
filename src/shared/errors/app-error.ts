@@ -1,4 +1,4 @@
-import * as codes from './error-codes';
+import * as codes from "./error-codes";
 
 export class AppError extends Error {
   constructor(
@@ -7,7 +7,7 @@ export class AppError extends Error {
     message?: string,
   ) {
     super(message ?? code);
-    this.name = 'AppError';
+    this.name = "AppError";
   }
 
   static badRequest(code: string) {
@@ -28,5 +28,9 @@ export class AppError extends Error {
 
   static conflict(code: string) {
     return new AppError(409, code);
+  }
+
+  static locked(code: string) {
+    return new AppError(423, code);
   }
 }

@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { LANGUAGES, THEMES } from '../../shared/config/enums';
+import { z } from "zod";
+import { LANGUAGES, THEMES } from "../../shared/config/enums";
 
 export const updatePreferencesSchema = z.object({
   language: z.enum(LANGUAGES).optional(),
