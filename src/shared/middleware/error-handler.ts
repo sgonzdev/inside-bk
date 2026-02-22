@@ -13,7 +13,6 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
     return;
   }
 
-  // Multer file-size limit
   if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
     res.status(400).json({ status: 'error', code: UPLOAD_TOO_LARGE });
     return;

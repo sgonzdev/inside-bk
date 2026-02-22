@@ -1,8 +1,13 @@
-import multer from 'multer';
-import { AppError } from '../../shared/errors/app-error';
-import * as codes from '../../shared/errors/error-codes';
+import multer from "multer";
+import { AppError } from "../../shared/errors/app-error";
+import * as codes from "../../shared/errors/error-codes";
 
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 export const avatarUpload = multer({

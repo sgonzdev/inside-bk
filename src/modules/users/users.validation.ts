@@ -1,5 +1,5 @@
-import { z } from 'zod';
-import { PROGRAMS } from '../../shared/config/enums';
+import { z } from "zod";
+import { PROGRAMS } from "../../shared/config/enums";
 
 export const updateProfileSchema = z.object({
   firstName: z.string().min(1).optional(),

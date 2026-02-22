@@ -1,12 +1,14 @@
-import { z } from 'zod';
-import * as codes from '../../shared/errors/error-codes';
-import { PROGRAMS, ROLES, LANGUAGES, SEXES } from '../../shared/config/enums';
+import { z } from "zod";
+import * as codes from "../../shared/errors/error-codes";
+import { PROGRAMS, ROLES, LANGUAGES, SEXES } from "../../shared/config/enums";
 
 export const registerSchema = z.object({
-  email: z.string().email(codes.EMAIL_INVALID).refine(
-    (e) => e.endsWith('@fet.edu.co'),
-    { message: codes.AUTH_INVALID_DOMAIN },
-  ),
+  email: z
+    .string()
+    .email(codes.EMAIL_INVALID)
+    .refine((e) => e.endsWith("@fet.edu.co"), {
+      message: codes.AUTH_INVALID_DOMAIN,
+    }),
   password: z
     .string()
     .min(8, codes.PASS_MIN_LENGTH)
@@ -16,15 +18,16 @@ export const registerSchema = z.object({
     .regex(/[^A-Za-z0-9]/, codes.PASS_SPECIAL),
   firstName: z.string().min(1, codes.FIELD_REQUIRED),
   lastName: z.string().min(1, codes.FIELD_REQUIRED),
-  role: z.enum(ROLES).default('STUDENT'),
-  language: z.enum(LANGUAGES).default('ES'),
+  role: z.enum(ROLES).default("STUDENT"),
+  language: z.enum(LANGUAGES).default("ES"),
   phone: z.string().min(7).optional(),
   idDocument: z.string().min(5).optional(),
   sex: z.enum(SEXES).optional(),
   program: z.enum(PROGRAMS).optional(),
   birthDate: z.coerce.date().refine(
     (date) => {
-      const age = (Date.now() - date.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+      const age =
+        (Date.now() - date.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
       return age >= 16;
     },
     { message: codes.AGE_MIN_16 },

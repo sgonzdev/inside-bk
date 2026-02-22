@@ -1,18 +1,18 @@
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
-import jwt, { SignOptions } from 'jsonwebtoken';
-import { TokenType } from '.prisma/client/index';
-import { AuthRepository } from './auth.repository';
-import { RegisterInput, LoginInput } from './auth.validation';
-import { AppError } from '../../shared/errors/app-error';
-import * as codes from '../../shared/errors/error-codes';
-import { env } from '../../shared/config/env';
-import { sendEmail } from '../../infrastructure/email/email.service';
-import { verifyEmailTemplate } from '../../infrastructure/email/templates/verify-email.template';
+import crypto from "crypto";
+import bcrypt from "bcryptjs";
+import jwt, { SignOptions } from "jsonwebtoken";
+import { TokenType } from ".prisma/client/index";
+import { AuthRepository } from "./auth.repository";
+import { RegisterInput, LoginInput } from "./auth.validation";
+import { AppError } from "../../shared/errors/app-error";
+import * as codes from "../../shared/errors/error-codes";
+import { env } from "../../shared/config/env";
+import { sendEmail } from "../../infrastructure/email/email.service";
+import { verifyEmailTemplate } from "../../infrastructure/email/templates/verify-email.template";
 
 function parseExpiry(expiry: string): Date {
   const match = expiry.match(/^(\d+)([smhd])$/);
-  if (!match) throw new Error('INTERNAL_ERROR');
+  if (!match) throw new Error("INTERNAL_ERROR");
 
   const value = parseInt(match[1], 10);
   const unit = match[2];
@@ -27,40 +27,66 @@ export class AuthService {
   async register(data: RegisterInput) {
     const existing = await this.repo.findByEmail(data.email);
 
-    if (existing?.emailVerified) throw AppError.conflict(codes.AUTH_EMAIL_EXISTS);
+    if (existing?.emailVerified)
+      throw AppError.conflict(codes.AUTH_EMAIL_EXISTS);
 
-    // If registered but not verified, resend verification email
-    const user = existing ?? await this.repo.create({
-      ...data,
-      password: await bcrypt.hash(data.password, env.BCRYPT_ROUNDS),
-    });
+    const user =
+      existing ??
+      (await this.repo.create({
+        ...data,
+        password: await bcrypt.hash(data.password, env.BCRYPT_ROUNDS),
+      }));
 
-    // Delete any previous verification token and create a fresh one
-    await this.repo.deleteVerificationTokensByUser(user.id, TokenType.EMAIL_VERIFICATION);
+    await this.repo.deleteVerificationTokensByUser(
+      user.id,
+      TokenType.EMAIL_VERIFICATION,
+    );
     const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + env.EMAIL_VERIFICATION_EXPIRES_H * 60 * 60 * 1000);
-    await this.repo.createVerificationToken(token, user.id, TokenType.EMAIL_VERIFICATION, expiresAt);
+    const expiresAt = new Date(
+      Date.now() + env.EMAIL_VERIFICATION_EXPIRES_H * 60 * 60 * 1000,
+    );
+    await this.repo.createVerificationToken(
+      token,
+      user.id,
+      TokenType.EMAIL_VERIFICATION,
+      expiresAt,
+    );
 
     const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${token}`;
-    const language = data.language ?? 'ES';
-    const subject = language === 'EN'
-      ? 'Verify your email - InsideOut Expressions'
-      : 'Verifica tu correo - InsideOut Expressions';
+    const language = data.language ?? "ES";
+    const subject =
+      language === "EN"
+        ? "Verify your email - InsideOut Expressions"
+        : "Verifica tu correo - InsideOut Expressions";
 
     await sendEmail({
       to: user.email,
       subject,
-      html: verifyEmailTemplate(user.firstName, verificationUrl, language, env.EMAIL_VERIFICATION_EXPIRES_H),
+      html: verifyEmailTemplate(
+        user.firstName,
+        verificationUrl,
+        language,
+        env.EMAIL_VERIFICATION_EXPIRES_H,
+      ),
     });
 
     return {
       code: codes.AUTH_REGISTER_SUCCESS,
-      user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
     };
   }
 
   async verifyEmail(token: string) {
-    const record = await this.repo.findVerificationToken(token, TokenType.EMAIL_VERIFICATION);
+    const record = await this.repo.findVerificationToken(
+      token,
+      TokenType.EMAIL_VERIFICATION,
+    );
 
     if (!record || record.expiresAt < new Date()) {
       if (record) await this.repo.deleteVerificationToken(record.id);
@@ -74,7 +100,6 @@ export class AuthService {
   async login(data: LoginInput, ip: string, userAgent?: string) {
     const user = await this.repo.findByEmail(data.email);
 
-    // Check lock before verifying password (avoid timing attacks revealing user existence)
     if (user) {
       const attempt = await this.repo.findLoginAttempt(user.id);
       if (attempt?.lockedUntil && attempt.lockedUntil > new Date()) {
@@ -82,29 +107,35 @@ export class AuthService {
       }
     }
 
-    const validPassword = user && await bcrypt.compare(data.password, user.password);
+    const validPassword =
+      user && (await bcrypt.compare(data.password, user.password));
 
     if (!user || !validPassword) {
       if (user) {
         const attempt = await this.repo.findLoginAttempt(user.id);
         const newAttempts = (attempt?.attempts ?? 0) + 1;
-        const lockedUntil = newAttempts >= env.LOGIN_MAX_ATTEMPTS
-          ? new Date(Date.now() + env.LOGIN_LOCK_MINUTES * 60 * 1000)
-          : null;
+        const lockedUntil =
+          newAttempts >= env.LOGIN_MAX_ATTEMPTS
+            ? new Date(Date.now() + env.LOGIN_LOCK_MINUTES * 60 * 1000)
+            : null;
         await this.repo.incrementLoginAttempts(user.id, lockedUntil);
       }
       throw AppError.unauthorized(codes.AUTH_INVALID_CREDENTIALS);
     }
 
-    if (!user.emailVerified) throw AppError.forbidden(codes.AUTH_EMAIL_NOT_VERIFIED);
+    if (!user.emailVerified)
+      throw AppError.forbidden(codes.AUTH_EMAIL_NOT_VERIFIED);
 
-    // Successful login — reset attempts and record history
     await this.repo.resetLoginAttempts(user.id);
     await this.repo.createLoginHistory(user.id, ip, userAgent);
 
     const payload = { userId: user.id, role: user.role };
-    const accessToken = jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN } as SignOptions);
-    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, { expiresIn: env.JWT_REFRESH_EXPIRES_IN } as SignOptions);
+    const accessToken = jwt.sign(payload, env.JWT_SECRET, {
+      expiresIn: env.JWT_EXPIRES_IN,
+    } as SignOptions);
+    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN,
+    } as SignOptions);
 
     const expiresAt = parseExpiry(env.JWT_REFRESH_EXPIRES_IN);
     await this.repo.saveRefreshToken(refreshToken, user.id, expiresAt);
@@ -112,26 +143,33 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
     };
   }
 
   async refresh(refreshToken: string) {
     let payload: { userId: string; role: string };
     try {
-      payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { userId: string; role: string };
+      payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as {
+        userId: string;
+        role: string;
+      };
     } catch {
       throw AppError.unauthorized(codes.AUTH_INVALID_TOKEN);
     }
 
     const stored = await this.repo.findRefreshToken(refreshToken);
     if (!stored) {
-      // Token not in DB — possible theft. Revoke all tokens for this user.
       await this.repo.deleteAllUserRefreshTokens(payload.userId);
       throw AppError.unauthorized(codes.AUTH_TOKEN_REUSE);
     }
 
-    // Rotate: delete old token, issue new pair
     await this.repo.deleteRefreshToken(refreshToken);
 
     const newPayload = { userId: payload.userId, role: payload.role };
@@ -143,7 +181,11 @@ export class AuthService {
     } as SignOptions);
 
     const expiresAt = parseExpiry(env.JWT_REFRESH_EXPIRES_IN);
-    await this.repo.saveRefreshToken(newRefreshToken, payload.userId, expiresAt);
+    await this.repo.saveRefreshToken(
+      newRefreshToken,
+      payload.userId,
+      expiresAt,
+    );
 
     return { accessToken, refreshToken: newRefreshToken };
   }
@@ -151,8 +193,8 @@ export class AuthService {
   async logout(refreshToken: string) {
     try {
       await this.repo.deleteRefreshToken(refreshToken);
-    } catch {
-      // Token already deleted or doesn't exist — no-op
+    } catch (error) {
+      console.error("Error deleting refresh token on logout:", error);
     }
   }
 }

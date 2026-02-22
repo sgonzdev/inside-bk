@@ -1,10 +1,17 @@
-import { ConsentRepository } from './consent.repository';
-import { SignConsentInput } from './consent.validation';
-import { generateConsentPdf } from '../../infrastructure/pdf/consent-pdf.generator';
-import { uploadFile, getPresignedUrl } from '../../infrastructure/storage/storage';
-import { AppError } from '../../shared/errors/app-error';
-import * as codes from '../../shared/errors/error-codes';
-import { parsePagination, paginate, PaginationQuery } from '../../shared/utils/pagination';
+import { ConsentRepository } from "./consent.repository";
+import { SignConsentInput } from "./consent.validation";
+import { generateConsentPdf } from "../../infrastructure/pdf/consent-pdf.generator";
+import {
+  uploadFile,
+  getPresignedUrl,
+} from "../../infrastructure/storage/storage";
+import { AppError } from "../../shared/errors/app-error";
+import * as codes from "../../shared/errors/error-codes";
+import {
+  parsePagination,
+  paginate,
+  PaginationQuery,
+} from "../../shared/utils/pagination";
 
 export class ConsentService {
   constructor(private readonly repo = new ConsentRepository()) {}
@@ -17,7 +24,9 @@ export class ConsentService {
     if (!user) throw AppError.notFound(codes.USER_NOT_FOUND);
 
     const isMinor = user.birthDate
-      ? (Date.now() - user.birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000) < 18
+      ? (Date.now() - user.birthDate.getTime()) /
+          (365.25 * 24 * 60 * 60 * 1000) <
+        18
       : false;
 
     if (isMinor && (!data.guardianName || !data.guardianPhone)) {
@@ -37,8 +46,14 @@ export class ConsentService {
     });
 
     const storageKey = `consents/${userId}.pdf`;
-    await uploadFile(storageKey, pdfBuffer, 'application/pdf');
-    await this.repo.create({ userId, storageKey, ip, guardianName: data.guardianName, guardianPhone: data.guardianPhone });
+    await uploadFile(storageKey, pdfBuffer, "application/pdf");
+    await this.repo.create({
+      userId,
+      storageKey,
+      ip,
+      guardianName: data.guardianName,
+      guardianPhone: data.guardianPhone,
+    });
     await this.repo.markUserConsentGiven(userId);
   }
 
@@ -51,8 +66,17 @@ export class ConsentService {
 
   async getAllConsents(query: PaginationQuery & { search?: string }) {
     const { page, limit, skip } = parsePagination(query);
-    const { data, total } = await this.repo.findAllWithUser(skip, limit, query.search);
-    const enriched = await Promise.all(data.map(async (c) => ({ ...c, url: await getPresignedUrl(c.storageKey) })));
+    const { data, total } = await this.repo.findAllWithUser(
+      skip,
+      limit,
+      query.search,
+    );
+    const enriched = await Promise.all(
+      data.map(async (c) => ({
+        ...c,
+        url: await getPresignedUrl(c.storageKey),
+      })),
+    );
     return paginate(enriched, total, page, limit);
   }
 }

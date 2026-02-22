@@ -1,5 +1,5 @@
-import { Resend } from 'resend';
-import { env } from '../../shared/config/env';
+import { Resend } from "resend";
+import { env } from "../../shared/config/env";
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -9,7 +9,11 @@ export interface SendEmailOptions {
   html: string;
 }
 
-export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<void> {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+}: SendEmailOptions): Promise<void> {
   const { error } = await resend.emails.send({
     from: env.EMAIL_FROM,
     to: Array.isArray(to) ? to : [to],
