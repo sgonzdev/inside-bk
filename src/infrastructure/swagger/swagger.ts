@@ -30,8 +30,8 @@ const spec = {
       Program: {
         type: 'string',
         enum: [
-          'ENGINEERING', 'MEDICINE', 'LAW', 'PSYCHOLOGY', 'BUSINESS',
-          'ARTS', 'SCIENCES', 'EDUCATION', 'ARCHITECTURE', 'COMMUNICATIONS',
+          'SOFTWARE_ENGINEERING', 'ENVIRONMENTAL_ENGINEERING', 'OCCUPATIONAL_HEALTH_ADMIN',
+          'FOOD_ENGINEERING', 'ELECTRICAL_ENGINEERING', 'DIGITAL_BUSINESS_ADMIN',
         ],
       },
       Role: { type: 'string', enum: ['STUDENT', 'PROFESSIONAL'] },
@@ -130,9 +130,8 @@ const spec = {
         type: 'object',
         properties: {
           id: { type: 'string', format: 'uuid' },
-          name: { type: 'string' },
+          name: { type: 'string', enum: ['HAPPY', 'SATISFIED', 'SAD', 'DEPRESSED', 'ANGRY', 'ANXIOUS', 'CONFUSED'] },
           color: { type: 'string', nullable: true },
-          children: { type: 'array', items: { $ref: '#/components/schemas/Emotion' } },
         },
       },
       LogEmotionBody: {
@@ -140,16 +139,12 @@ const spec = {
         required: ['emotionId'],
         properties: {
           emotionId: { type: 'string', format: 'uuid' },
-          intensity: { type: 'integer', minimum: 1, maximum: 10, default: 5 },
-          note: { type: 'string' },
         },
       },
       EmotionLog: {
         type: 'object',
         properties: {
           id: { type: 'string', format: 'uuid' },
-          intensity: { type: 'integer' },
-          note: { type: 'string', nullable: true },
           aiFeedback: { type: 'string', nullable: true },
           createdAt: { type: 'string', format: 'date-time' },
           emotion: { $ref: '#/components/schemas/Emotion' },
@@ -305,10 +300,7 @@ const spec = {
       EnumsResponse: {
         type: 'object',
         properties: {
-          programs: { type: 'array', items: { type: 'string' } },
-          roles: { type: 'array', items: { type: 'string' } },
-          languages: { type: 'array', items: { type: 'string' } },
-          themes: { type: 'array', items: { type: 'string' } },
+          programs: { type: 'array', items: { $ref: '#/components/schemas/Program' } },
         },
       },
     },
@@ -566,6 +558,27 @@ const spec = {
           content: { 'application/json': { schema: { $ref: '#/components/schemas/LogEmotionBody' } } },
         },
         responses: { '201': { description: 'Log creado con feedback de IA', content: { 'application/json': { schema: { properties: { status: { type: 'string' }, data: { $ref: '#/components/schemas/EmotionLog' } } } } } }, '404': { description: 'Emoción no encontrada' } },
+      },
+    },
+    '/emotions/prediction': {
+      get: {
+        tags: ['Emotions'],
+        summary: 'Predicción emocional del día (solo STUDENT)',
+        description: 'Genera una predicción emocional basada en los últimos registros de emociones y entradas de diario. Se genera una vez por día calendario y se reutiliza hasta la medianoche.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Predicción del día',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'success' },
+              data: { type: 'object', properties: {
+                prediction: { type: 'string', example: 'Hoy podrías sentirte un poco ansioso...' },
+              }},
+            }}}},
+          },
+          '401': { description: 'No autenticado' },
+          '403': { description: 'Solo accesible por STUDENT' },
+        },
       },
     },
     '/emotions/history': {
@@ -871,7 +884,7 @@ const spec = {
     '/enums': {
       get: {
         tags: ['Enums'],
-        summary: 'Obtener valores de enums (programas, roles, idiomas, temas)',
+        summary: 'Obtener programas académicos disponibles',
         responses: {
           '200': {
             description: 'Valores de enums',

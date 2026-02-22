@@ -21,5 +21,6 @@ router.get(
   validate(statsQuerySchema, "query"),
   controller.getStats,
 );
+router.get("/prediction", authorize("STUDENT"), controller.getDailyPrediction);
 
 export default router;

@@ -7,6 +7,7 @@ import {
   PaginationQuery,
 } from "../../shared/utils/pagination";
 import { getPresignedUrl } from "../../infrastructure/storage/storage";
+import { analyzeAndAlert } from "./risk-analysis.service";
 
 export class DiaryService {
   constructor(private readonly repo = new DiaryRepository()) {}
@@ -51,7 +52,9 @@ export class DiaryService {
   }
 
   async create(userId: string, data: CreateDiaryInput) {
-    return this.repo.create(userId, data);
+    const entry = await this.repo.create(userId, data);
+    void analyzeAndAlert(userId, entry.id, data.content);
+    return entry;
   }
 
   async update(id: string, userId: string, data: UpdateDiaryInput) {

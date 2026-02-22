@@ -66,7 +66,10 @@ export class DiaryRepository {
   }
 
   async create(userId: string, data: CreateDiaryInput) {
-    return prisma.diaryEntry.create({ data: { ...data, userId } });
+    return prisma.diaryEntry.create({
+      data: { ...data, userId },
+      include: { media: true },
+    });
   }
 
   async update(id: string, userId: string, data: UpdateDiaryInput) {

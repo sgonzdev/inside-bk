@@ -4,7 +4,7 @@
   "description": "Backend for InsideOut Expressions - psychological support platform for students",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only --poll src/server.ts",
+    "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
@@ -39,7 +39,7 @@
     "@types/pdfkit": "^0.17.5",
     "@types/swagger-ui-express": "^4.1.8",
     "prisma": "^6.4.1",
-    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.3"
   }
 }

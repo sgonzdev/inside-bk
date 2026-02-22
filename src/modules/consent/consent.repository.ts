@@ -18,7 +18,14 @@ export class ConsentRepository {
   async findUserById(userId: string) {
     return prisma.user.findUnique({
       where: { id: userId },
-      select: { firstName: true, lastName: true, email: true, birthDate: true },
+      select: {
+        firstName: true,
+        lastName: true,
+        email: true,
+        birthDate: true,
+        idDocument: true,
+        program: true,
+      },
     });
   }
 

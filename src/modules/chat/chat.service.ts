@@ -16,9 +16,13 @@ import { normalizeMime } from "../../shared/middleware/media-upload";
 import * as codes from "../../shared/errors/error-codes";
 import path from "path";
 import crypto from "crypto";
+import { NotificationsService } from "../notifications/notifications.service";
 
 export class ChatService {
-  constructor(private readonly repo = new ChatRepository()) {}
+  constructor(
+    private readonly repo = new ChatRepository(),
+    private readonly notifications = new NotificationsService(),
+  ) {}
 
   async createRoom(professionalId: string, data: CreateRoomInput) {
     const allParticipants = [
@@ -135,8 +139,29 @@ export class ChatService {
 
   async sendMessage(roomId: string, senderId: string, content: string) {
     await this.ensureParticipant(roomId, senderId);
-    const message = await this.repo.createMessage(roomId, senderId, content);
-    await this.emitToRoom(roomId, "chat:message", message);
+    const message = (await this.repo.createMessage(
+      roomId,
+      senderId,
+      content,
+    )) as {
+      id: string;
+      roomId: string;
+      senderId: string;
+      content: string;
+      createdAt: Date;
+      sender: { firstName: string; lastName: string };
+      media: unknown[];
+      receipts: unknown[];
+    };
+    const participantIds = await this.repo.getRoomParticipantIds(roomId);
+    this.broadcast(participantIds, "chat:message", message);
+    await this.notifyUnread(
+      participantIds,
+      senderId,
+      roomId,
+      message.sender,
+      content,
+    );
     return message;
   }
 
@@ -158,25 +183,39 @@ export class ChatService {
       }),
     );
 
-    const message = await this.repo.createMediaMessage(
+    const message = (await this.repo.createMediaMessage(
       roomId,
       senderId,
       uploaded,
       content,
-    );
+    )) as {
+      id: string;
+      roomId: string;
+      senderId: string;
+      content: string;
+      createdAt: Date;
+      sender: { firstName: string; lastName: string };
+      media: Array<{ storageKey: string; [key: string]: unknown }>;
+    };
     const enriched = {
       ...message,
       media: await Promise.all(
-        (
-          message.media as Array<{ storageKey: string; [key: string]: unknown }>
-        ).map(async (m) => ({
+        message.media.map(async (m) => ({
           ...m,
           url: await getPresignedUrl(m.storageKey),
         })),
       ),
     };
 
-    await this.emitToRoom(roomId, "chat:message", enriched);
+    const participantIds = await this.repo.getRoomParticipantIds(roomId);
+    this.broadcast(participantIds, "chat:message", enriched);
+    await this.notifyUnread(
+      participantIds,
+      senderId,
+      roomId,
+      message.sender,
+      content || "Archivo multimedia",
+    );
     return enriched;
   }
 
@@ -184,7 +223,8 @@ export class ChatService {
     await this.ensureParticipant(roomId, userId);
     const count = await this.repo.markRoomRead(roomId, userId);
     if (count > 0) {
-      await this.emitToRoom(roomId, "chat:read", {
+      const participantIds = await this.repo.getRoomParticipantIds(roomId);
+      await this.broadcast(participantIds, "chat:read", {
         roomId,
         userId,
         readAt: new Date(),
@@ -198,11 +238,35 @@ export class ChatService {
     if (!isParticipant) throw AppError.forbidden(codes.CHAT_NOT_PARTICIPANT);
   }
 
-  private async emitToRoom(roomId: string, event: string, payload: unknown) {
-    const participantIds = await this.repo.getRoomParticipantIds(roomId);
+  private broadcast(participantIds: string[], event: string, payload: unknown) {
     const io = getIO();
-    for (const pid of participantIds) {
-      io.to(`user:${pid}`).emit(event, payload);
-    }
+    for (const pid of participantIds) io.to(`user:${pid}`).emit(event, payload);
+  }
+
+  private async notifyUnread(
+    participantIds: string[],
+    senderId: string,
+    roomId: string,
+    sender: { firstName: string; lastName: string },
+    content: string,
+  ) {
+    const preview = content.length > 60 ? `${content.slice(0, 60)}…` : content;
+    const message = JSON.stringify({
+      senderId,
+      roomId,
+      senderName: `${sender.firstName} ${sender.lastName}`,
+      preview,
+    });
+    await Promise.allSettled(
+      participantIds
+        .filter((id) => id !== senderId)
+        .map((userId) =>
+          this.notifications.create({
+            userId,
+            title: "CHAT_NEW_MESSAGE",
+            message,
+          }),
+        ),
+    );
   }
 }

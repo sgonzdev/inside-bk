@@ -23,6 +23,10 @@ export const FIELD_REQUIRED = "FIELD_REQUIRED"; // Campo obligatorio vacío
 export const EMAIL_INVALID = "EMAIL_INVALID"; // Formato de email inválido
 export const CONSENT_REQUIRED = "CONSENT_REQUIRED"; // Se requiere aceptar el consentimiento
 export const AGE_MIN_16 = "AGE_MIN_16"; // Debe ser mayor de 16 años
+export const AGE_MAX = "AGE_MAX"; // La fecha de nacimiento no es válida (año muy antiguo)
+export const PHONE_INVALID = "PHONE_INVALID"; // El teléfono debe tener exactamente 10 dígitos
+export const ID_DOCUMENT_INVALID = "ID_DOCUMENT_INVALID"; // El documento debe tener entre 5 y 10 dígitos
+export const NAME_INVALID = "NAME_INVALID"; // El nombre solo puede contener letras y espacios
 
 // ── Generic ──────────────────────────────────────────
 export const FORBIDDEN = "FORBIDDEN"; // Sin permisos suficientes para esta acción
@@ -37,6 +41,8 @@ export const AI_CONFIG_ERROR = "AI_CONFIG_ERROR"; // Configuración de IA invál
 
 // ── Emotions ─────────────────────────────────────────
 export const EMOTION_NOT_FOUND = "EMOTION_NOT_FOUND"; // La emoción especificada no existe
+export const STATS_AGE_RANGE_INVALID = "STATS_AGE_RANGE_INVALID"; // ageMin no puede ser mayor que ageMax
+export const STATS_DATE_RANGE_INVALID = "STATS_DATE_RANGE_INVALID"; // from no puede ser posterior a to
 
 // ── Diary ────────────────────────────────────────────
 export const DIARY_NOT_FOUND = "DIARY_NOT_FOUND"; // La entrada de diario no existe
@@ -46,9 +52,14 @@ export const CHAT_NOT_PARTICIPANT = "CHAT_NOT_PARTICIPANT"; // No es participant
 export const CHAT_PARTICIPANTS_MUST_BE_STUDENTS =
   "CHAT_PARTICIPANTS_MUST_BE_STUDENTS"; // Solo se pueden añadir estudiantes a una sala
 export const CHAT_ALREADY_PARTICIPANT = "CHAT_ALREADY_PARTICIPANT"; // El usuario ya es participante de esta sala
+export const CHAT_NAME_TOO_LONG = "CHAT_NAME_TOO_LONG"; // El nombre de la sala no puede superar 100 caracteres
+export const CHAT_TOO_MANY_PARTICIPANTS = "CHAT_TOO_MANY_PARTICIPANTS"; // No se pueden añadir más de 50 participantes
+export const CHAT_MESSAGE_TOO_LONG = "CHAT_MESSAGE_TOO_LONG"; // El mensaje no puede superar 2000 caracteres
 
 // ── Notifications ────────────────────────────────────
 export const NOTIFICATIONS_DISABLED = "NOTIFICATIONS_DISABLED"; // El usuario tiene las notificaciones desactivadas
+export const NOTIF_CHAT_NEW_MESSAGE = "CHAT_NEW_MESSAGE"; // Nuevo mensaje de chat no leído
+export const NOTIF_DIARY_RISK_ALERT = "DIARY_RISK_ALERT"; // Alerta de riesgo detectada en entrada de diario
 
 // ── Users ────────────────────────────────────────────
 export const USER_NOT_FOUND = "USER_NOT_FOUND";

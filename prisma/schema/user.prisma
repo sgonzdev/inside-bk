@@ -16,8 +16,9 @@ model User {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  diaryEntries  DiaryEntry[]
-  emotionLogs   EmotionLog[]
+  diaryEntries         DiaryEntry[]
+  emotionLogs          EmotionLog[]
+  emotionalPredictions EmotionalPrediction[]
   sentMessages   ChatMessage[]    @relation("SentMessages")
   chatRooms      ChatParticipant[]
   notifications  Notification[]

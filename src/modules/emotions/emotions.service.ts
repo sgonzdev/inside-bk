@@ -36,7 +36,7 @@ export class EmotionsService {
         [
           {
             role: "user",
-            content: `I'm feeling ${emotion.name} with intensity ${data.intensity}/10.${data.note ? ` Note: ${data.note}` : ""}`,
+            content: `I'm feeling ${emotion.name}.`,
           },
         ],
         { temperature: 0.8, maxTokens: 256 },
@@ -55,7 +55,52 @@ export class EmotionsService {
     return paginate(data, total, page, limit);
   }
 
-  async getStats(query: StatsQuery) {
-    return this.repo.getStats(query);
+  async getStats(userId: string, query: StatsQuery) {
+    const raw = await this.repo.getStats(query);
+
+    const sorted = [...raw].sort((a, b) => b.count - a.count);
+    const total = sorted.reduce((sum, r) => sum + r.count, 0);
+
+    const userPrefs = await this.prefs.get(userId);
+    const isEN = userPrefs.language === "EN";
+    const datasetLabel = isEN ? "Records by emotion" : "Registros por emoción";
+
+    const labels = sorted.map((r) => r.emotionName);
+    const data = sorted.map((r) => r.count);
+
+    return {
+      total,
+      charts: {
+        bar: {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [{ label: datasetLabel, data }],
+          },
+        },
+        doughnut: {
+          type: "doughnut",
+          data: {
+            labels,
+            datasets: [{ label: datasetLabel, data }],
+          },
+        },
+        line: {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              { label: datasetLabel, data, fill: false, tension: 0.3 },
+            ],
+          },
+        },
+      },
+      breakdown: sorted.map((r) => ({
+        emotionId: r.emotionId,
+        emotionName: r.emotionName,
+        count: r.count,
+        percentage: total > 0 ? Math.round((r.count / total) * 100) : 0,
+      })),
+    };
   }
 }
