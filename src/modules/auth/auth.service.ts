@@ -95,6 +95,34 @@ export class AuthService {
 
     await this.repo.markEmailVerified(record.userId);
     await this.repo.deleteVerificationToken(record.id);
+
+    const user = await this.repo.findById(record.userId);
+    if (!user) throw AppError.badRequest(codes.AUTH_VERIFICATION_TOKEN_INVALID);
+
+    const payload = { userId: user.id, role: user.role };
+    const accessToken = jwt.sign(payload, env.JWT_SECRET, {
+      expiresIn: env.JWT_EXPIRES_IN,
+    } as SignOptions);
+    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN,
+    } as SignOptions);
+
+    const expiresAt = parseExpiry(env.JWT_REFRESH_EXPIRES_IN);
+    await this.repo.saveRefreshToken(refreshToken, user.id, expiresAt);
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        program: user.program,
+        birthDate: user.birthDate,
+        idDocument: user.idDocument,
+      },
+    };
   }
 
   async login(data: LoginInput, ip: string, userAgent?: string) {

@@ -39,7 +39,7 @@ const spec = {
       // Auth
       RegisterBody: {
         type: 'object',
-        required: ['email', 'password', 'firstName', 'lastName'],
+        required: ['email', 'password', 'firstName', 'lastName', 'program', 'birthDate', 'idDocument'],
         properties: {
           email: { type: 'string', format: 'email' },
           password: { type: 'string', minLength: 8 },
@@ -346,10 +346,29 @@ const spec = {
       get: {
         tags: ['Auth'],
         summary: 'Verificar correo electrónico',
-        description: 'Confirma la cuenta usando el token enviado al correo. El token expira en 24 horas.',
+        description: 'Confirma la cuenta usando el token enviado al correo. El token expira en 24 horas. Retorna accessToken y refreshToken para iniciar sesión automáticamente.',
         parameters: [{ name: 'token', in: 'query', required: true, schema: { type: 'string', format: 'uuid' }, description: 'Token de verificación recibido por correo' }],
         responses: {
-          '200': { description: 'Correo verificado (AUTH_EMAIL_VERIFIED)' },
+          '200': {
+            description: 'Correo verificado — sesión iniciada automáticamente',
+            content: { 'application/json': { schema: { properties: {
+              status: { type: 'string', example: 'success' },
+              code: { type: 'string', example: 'AUTH_EMAIL_VERIFIED' },
+              data: { type: 'object', properties: {
+                accessToken: { type: 'string' },
+                refreshToken: { type: 'string' },
+                user: { type: 'object', properties: {
+                  id: { type: 'string', format: 'uuid' },
+                  email: { type: 'string', format: 'email' },
+                  firstName: { type: 'string' },
+                  lastName: { type: 'string' },
+                  program: { $ref: '#/components/schemas/Program' },
+                  birthDate: { type: 'string', format: 'date-time', nullable: true },
+                  idDocument: { type: 'string', nullable: true },
+                }},
+              }},
+            }}}},
+          },
           '400': { description: 'Token inválido o expirado (AUTH_VERIFICATION_TOKEN_INVALID)' },
         },
       },

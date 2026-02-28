@@ -18,6 +18,22 @@ export class AuthRepository {
     });
   }
 
+  async findById(id: string) {
+    return prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        program: true,
+        birthDate: true,
+        idDocument: true,
+      },
+    });
+  }
+
   async create(data: RegisterInput & { password: string }) {
     return prisma.user.create({
       data: {
