@@ -31,6 +31,6 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
-  await service.verifyEmail(req.query.token as string);
-  res.json({ status: "success", code: codes.AUTH_EMAIL_VERIFIED });
+  const data = await service.verifyEmail(req.query.token as string);
+  res.json({ status: "success", code: codes.AUTH_EMAIL_VERIFIED, data });
 });

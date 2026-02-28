@@ -21,6 +21,7 @@ const envSchema = z.object({
   DEEPSEEK_API_KEY: z.string().optional(),
   BCRYPT_ROUNDS: z.coerce.number().default(12),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  REDIS_URL: z.string().default("redis://redis:6379"),
   RATE_LIMIT_GENERAL_WINDOW_MS: z.coerce.number().default(60_000),
   RATE_LIMIT_GENERAL_MAX: z.coerce.number().default(100),
   RATE_LIMIT_AUTH_WINDOW_MS: z.coerce.number().default(60_000),

@@ -34,10 +34,10 @@ export const registerSchema = z.object({
     .optional(),
   idDocument: z
     .string()
-    .regex(/^\d{5,10}$/, codes.ID_DOCUMENT_INVALID)
-    .optional(),
+    .min(1, codes.FIELD_REQUIRED)
+    .regex(/^\d{5,10}$/, codes.ID_DOCUMENT_INVALID),
   sex: z.enum(SEXES).optional(),
-  program: z.enum(PROGRAMS).optional(),
+  program: z.enum(PROGRAMS, { errorMap: () => ({ message: codes.FIELD_REQUIRED }) }),
   birthDate: z.coerce
     .date()
     .refine(
