@@ -14,6 +14,13 @@ export const sign = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json({ status: "success" });
 });
 
+export const getMyProfile = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await service.getMyProfile(req.user!.userId);
+    res.json({ status: "success", data: result });
+  },
+);
+
 export const getMyConsent = asyncHandler(
   async (req: Request, res: Response) => {
     const result = await service.getMyConsent(req.user!.userId);

@@ -13,6 +13,7 @@ router.post(
   validate(signConsentSchema),
   controller.sign,
 );
+router.get("/signer-info", authenticate, authorize("STUDENT"), controller.getMyProfile);
 router.get("/me", authenticate, authorize("STUDENT"), controller.getMyConsent);
 router.get(
   "/",

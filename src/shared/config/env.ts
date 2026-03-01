@@ -35,6 +35,7 @@ const envSchema = z.object({
   LOGIN_MAX_ATTEMPTS: z.coerce.number().default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().default(15),
   EMAIL_VERIFICATION_EXPIRES_H: z.coerce.number().default(24),
+  PASSWORD_RESET_EXPIRES_MIN: z.coerce.number().default(15),
   RESEND_API_KEY: z.string().min(1),
   EMAIL_FROM: z
     .string()
