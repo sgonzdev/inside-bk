@@ -5,6 +5,8 @@ import {
   loginSchema,
   refreshSchema,
   logoutSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "./auth.validation";
 import { authenticate } from "../../shared/middleware/auth";
 import { authLimiter } from "../../shared/middleware/rate-limiter";
@@ -27,5 +29,7 @@ router.post(
 );
 router.post("/logout", authenticate, validate(logoutSchema), controller.logout);
 router.get("/verify-email", controller.verifyEmail);
+router.post("/forgot-password", authLimiter, validate(forgotPasswordSchema), controller.forgotPassword);
+router.post("/reset-password", authLimiter, validate(resetPasswordSchema), controller.resetPassword);
 
 export default router;

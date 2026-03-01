@@ -3,12 +3,13 @@ import bcrypt from "bcryptjs";
 import jwt, { SignOptions } from "jsonwebtoken";
 import { TokenType } from ".prisma/client/index";
 import { AuthRepository } from "./auth.repository";
-import { RegisterInput, LoginInput } from "./auth.validation";
+import { RegisterInput, LoginInput, ForgotPasswordInput, ResetPasswordInput } from "./auth.validation";
 import { AppError } from "../../shared/errors/app-error";
 import * as codes from "../../shared/errors/error-codes";
 import { env } from "../../shared/config/env";
 import { sendEmail } from "../../infrastructure/email/email.service";
 import { verifyEmailTemplate } from "../../infrastructure/email/templates/verify-email.template";
+import { resetPasswordTemplate } from "../../infrastructure/email/templates/reset-password.template";
 
 function parseExpiry(expiry: string): Date {
   const match = expiry.match(/^(\d+)([smhd])$/);
@@ -225,5 +226,46 @@ export class AuthService {
     } catch (error) {
       console.error("Error deleting refresh token on logout:", error);
     }
+  }
+
+  async forgotPassword(data: ForgotPasswordInput) {
+    const user = await this.repo.findByEmailForReset(data.email);
+
+    // Respuesta siempre exitosa — no revelar si el email existe
+    if (!user || !user.emailVerified) return;
+
+    await this.repo.deleteVerificationTokensByUser(user.id, TokenType.PASSWORD_RESET);
+
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + env.PASSWORD_RESET_EXPIRES_MIN * 60 * 1000);
+    await this.repo.createVerificationToken(token, user.id, TokenType.PASSWORD_RESET, expiresAt);
+
+    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${token}`;
+    await sendEmail({
+      to: data.email,
+      subject: "Restablece tu contraseña - InsideOut Expressions",
+      html: resetPasswordTemplate(user.firstName, resetUrl, "ES", env.PASSWORD_RESET_EXPIRES_MIN),
+    });
+  }
+
+  async resetPassword(data: ResetPasswordInput) {
+    const record = await this.repo.findVerificationToken(data.token, TokenType.PASSWORD_RESET);
+
+    if (!record || record.expiresAt < new Date()) {
+      if (record) await this.repo.deleteVerificationToken(record.id);
+      throw AppError.badRequest(codes.AUTH_RESET_TOKEN_INVALID);
+    }
+
+    const current = await this.repo.findPasswordHash(record.userId);
+    if (current && await bcrypt.compare(data.password, current.password)) {
+      throw AppError.badRequest(codes.AUTH_PASSWORD_SAME_AS_CURRENT);
+    }
+
+    const hashed = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
+    await Promise.all([
+      this.repo.updatePassword(record.userId, hashed),
+      this.repo.deleteVerificationToken(record.id),
+      this.repo.deleteAllUserRefreshTokens(record.userId),
+    ]);
   }
 }

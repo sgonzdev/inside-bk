@@ -136,4 +136,25 @@ export class AuthRepository {
       take: 10,
     });
   }
+
+  async findByEmailForReset(email: string) {
+    return prisma.user.findUnique({
+      where: { email },
+      select: { id: true, firstName: true, emailVerified: true },
+    });
+  }
+
+  async findPasswordHash(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: { password: true },
+    });
+  }
+
+  async updatePassword(userId: string, hashedPassword: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+  }
 }

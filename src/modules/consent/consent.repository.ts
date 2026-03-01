@@ -29,6 +29,20 @@ export class ConsentRepository {
     });
   }
 
+  async findUserProfile(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        firstName: true,
+        lastName: true,
+        email: true,
+        idDocument: true,
+        program: true,
+        birthDate: true,
+      },
+    });
+  }
+
   async markUserConsentGiven(userId: string) {
     return prisma.user.update({
       where: { id: userId },
