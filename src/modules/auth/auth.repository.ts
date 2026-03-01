@@ -14,6 +14,7 @@ export class AuthRepository {
         lastName: true,
         role: true,
         emailVerified: true,
+        consentGiven: true,
       },
     });
   }

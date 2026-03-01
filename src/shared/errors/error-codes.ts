@@ -41,6 +41,8 @@ export const AI_CONFIG_ERROR = "AI_CONFIG_ERROR"; // Configuración de IA invál
 
 // ── Emotions ─────────────────────────────────────────
 export const EMOTION_NOT_FOUND = "EMOTION_NOT_FOUND"; // La emoción especificada no existe
+export const EMOTION_COOLDOWN = "EMOTION_COOLDOWN"; // Debes esperar antes de registrar otra emoción
+export const EMOTION_DAILY_LIMIT = "EMOTION_DAILY_LIMIT"; // Límite diario de registros de emoción alcanzado
 export const STATS_AGE_RANGE_INVALID = "STATS_AGE_RANGE_INVALID"; // ageMin no puede ser mayor que ageMax
 export const STATS_DATE_RANGE_INVALID = "STATS_DATE_RANGE_INVALID"; // from no puede ser posterior a to
 

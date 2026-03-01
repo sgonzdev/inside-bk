@@ -32,3 +32,13 @@ export const authLimiter = rateLimit({
   store: makeStore("rl:auth:"),
   message: { status: "error", code: RATE_LIMITED },
 });
+
+/** Strict limiter for AI-consuming endpoints (emotion log). Max 10 per hour. */
+export const emotionLogLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: makeStore("rl:emotion-log:"),
+  message: { status: "error", code: RATE_LIMITED },
+});
