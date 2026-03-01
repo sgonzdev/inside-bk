@@ -11,7 +11,7 @@ const redis = new Redis(env.REDIS_URL, {
 
 const makeStore = (prefix: string) =>
   new RedisStore({
-    sendCommand: (...args: string[]) => redis.call(...args) as any,
+    sendCommand: (...args: string[]) => redis.call(args[0], ...args.slice(1)) as any,
     prefix,
   });
 

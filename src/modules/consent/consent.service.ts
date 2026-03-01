@@ -58,6 +58,12 @@ export class ConsentService {
     await this.repo.markUserConsentGiven(userId);
   }
 
+  async getMyProfile(userId: string) {
+    const user = await this.repo.findUserProfile(userId);
+    if (!user) throw AppError.notFound(codes.USER_NOT_FOUND);
+    return user;
+  }
+
   async getMyConsent(userId: string) {
     const consent = await this.repo.findByUserId(userId);
     if (!consent) throw AppError.notFound(codes.CONSENT_NOT_FOUND);
