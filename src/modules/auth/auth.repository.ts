@@ -157,4 +157,25 @@ export class AuthRepository {
       data: { password: hashedPassword },
     });
   }
+
+  async findAllProfessionals() {
+    return prisma.user.findMany({
+      where: { role: "PROFESSIONAL" },
+      select: { id: true },
+    });
+  }
+
+  async createChatRoomsForStudent(studentId: string, professionalIds: string[]) {
+    await Promise.all(
+      professionalIds.map((profId) =>
+        prisma.chatRoom.create({
+          data: {
+            participants: {
+              create: [{ userId: studentId }, { userId: profId }],
+            },
+          },
+        }),
+      ),
+    );
+  }
 }
