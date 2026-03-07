@@ -80,7 +80,15 @@ export class ChatService {
       limit,
       query.search,
     );
-    return paginate(data, total, page, limit);
+    const enriched = data.map((room) => {
+      if (room.name) return room;
+      const other = room.participants.find((p) => p.userId !== userId);
+      const displayName = other
+        ? `${other.user.firstName} ${other.user.lastName}`
+        : "Chat";
+      return { ...room, displayName };
+    });
+    return paginate(enriched, total, page, limit);
   }
 
   async getMessages(

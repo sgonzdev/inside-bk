@@ -100,6 +100,16 @@ export class AuthService {
     const user = await this.repo.findById(record.userId);
     if (!user) throw AppError.badRequest(codes.AUTH_VERIFICATION_TOKEN_INVALID);
 
+    if (user.role === "STUDENT") {
+      const professionals = await this.repo.findAllProfessionals();
+      if (professionals.length) {
+        await this.repo.createChatRoomsForStudent(
+          user.id,
+          professionals.map((p) => p.id),
+        );
+      }
+    }
+
     const payload = { userId: user.id, role: user.role };
     const accessToken = jwt.sign(payload, env.JWT_SECRET, {
       expiresIn: env.JWT_EXPIRES_IN,

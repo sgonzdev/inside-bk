@@ -55,10 +55,26 @@ export class ChatRepository {
     search?: string,
   ) {
     const where = {
-      participants: { some: { userId } },
-      ...(search
-        ? { name: { contains: search, mode: "insensitive" as const } }
-        : {}),
+      AND: [
+        { participants: { some: { userId } } },
+        ...(search
+          ? [
+              {
+                participants: {
+                  some: {
+                    userId: { not: userId },
+                    user: {
+                      OR: [
+                        { firstName: { contains: search, mode: "insensitive" as const } },
+                        { lastName: { contains: search, mode: "insensitive" as const } },
+                      ],
+                    },
+                  },
+                },
+              },
+            ]
+          : []),
+      ],
     };
     const [rooms, total] = await Promise.all([
       prisma.chatRoom.findMany({
