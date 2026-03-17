@@ -7,6 +7,13 @@ import { AuthPayload } from "../../shared/middleware/auth";
 
 let io: Server;
 
+async function isParticipant(roomId: string, userId: string): Promise<boolean> {
+  const p = await prisma.chatParticipant.findUnique({
+    where: { userId_roomId: { userId, roomId } },
+  });
+  return !!p;
+}
+
 async function markRoomRead(roomId: string, userId: string) {
   const messages = await prisma.chatMessage.findMany({
     where: { roomId, senderId: { not: userId } },
@@ -63,6 +70,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
     socket.on("chat:open-room", async ({ roomId }: { roomId: string }) => {
       if (!roomId) return;
       try {
+        if (!(await isParticipant(roomId, userId))) return;
         await markRoomRead(roomId, userId);
       } catch (err) {
         console.error("chat:open-room error", err);
@@ -75,6 +83,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
       async ({ messageId, roomId }: { messageId: string; roomId: string }) => {
         if (!messageId || !roomId) return;
         try {
+          if (!(await isParticipant(roomId, userId))) return;
           const message = await prisma.chatMessage.findUnique({
             where: { id: messageId },
             select: { senderId: true },
@@ -97,6 +106,7 @@ export function initializeSocket(httpServer: HttpServer): Server {
       async ({ roomId, typing }: { roomId: string; typing: boolean }) => {
         if (!roomId) return;
         try {
+          if (!(await isParticipant(roomId, userId))) return;
           const participants = await prisma.chatParticipant.findMany({
             where: { roomId, userId: { not: userId } },
             select: { userId: true },

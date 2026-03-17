@@ -42,3 +42,10 @@ export const getAllForProfessional = asyncHandler(
     res.json({ status: "success", ...result });
   },
 );
+
+export const getByIdForProfessional = asyncHandler(
+  async (req: Request, res: Response) => {
+    const entry = await service.getByIdForProfessional(req.params.id as string);
+    res.json({ status: "success", data: entry });
+  },
+);

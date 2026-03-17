@@ -6,7 +6,7 @@ import {
   createRoomSchema,
   sendMessageSchema,
   roomParamsSchema,
-  addParticipantSchema,
+  // addParticipantSchema, // deshabilitado temporalmente
 } from "./chat.validation";
 import * as controller from "./chat.controller";
 import { mediaUpload as voiceUpload } from "../../shared/middleware/media-upload";
@@ -21,13 +21,14 @@ router.post(
   validate(createRoomSchema),
   controller.createRoom,
 );
-router.post(
-  "/rooms/:roomId/participants",
-  authorize("PROFESSIONAL"),
-  validate(roomParamsSchema, "params"),
-  validate(addParticipantSchema),
-  controller.addParticipant,
-);
+
+// router.post(
+//   "/rooms/:roomId/participants",
+//   authorize("PROFESSIONAL"),
+//   validate(roomParamsSchema, "params"),
+//   validate(addParticipantSchema),
+//   controller.addParticipant,
+// );
 
 router.get("/rooms", controller.getRooms);
 router.get(
