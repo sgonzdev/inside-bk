@@ -4,6 +4,15 @@ const MESSAGE_INCLUDE = {
   sender: { select: { id: true, firstName: true, lastName: true } },
   media: true,
   receipts: { select: { userId: true, readAt: true } },
+  replyTo: {
+    select: {
+      id: true,
+      content: true,
+      senderId: true,
+      sender: { select: { firstName: true, lastName: true } },
+      media: { select: { mimeType: true }, take: 1 },
+    },
+  },
 } as const;
 
 export class ChatRepository {
@@ -121,7 +130,9 @@ export class ChatRepository {
       const countAfter = await prisma.chatMessage.count({
         where: { roomId, createdAt: { gte: date } },
       });
-      skip = Math.max(0, countAfter - Math.floor(take / 2));
+      const rawSkip = Math.max(0, countAfter - Math.floor(take / 2));
+      // Snap to page boundary so page N-1 / N+1 navigation is contiguous
+      skip = Math.floor(rawSkip / take) * take;
     }
 
     const data = await prisma.chatMessage.findMany({
@@ -135,9 +146,9 @@ export class ChatRepository {
     return { data: data.reverse(), total, skip };
   }
 
-  async createMessage(roomId: string, senderId: string, content: string) {
+  async createMessage(roomId: string, senderId: string, content: string, replyToId?: string) {
     return prisma.chatMessage.create({
-      data: { roomId, senderId, content },
+      data: { roomId, senderId, content, ...(replyToId ? { replyToId } : {}) },
       include: MESSAGE_INCLUDE,
     });
   }
@@ -147,9 +158,10 @@ export class ChatRepository {
     senderId: string,
     files: { storageKey: string; mimeType: string; size: number }[],
     content = "",
+    replyToId?: string,
   ) {
     return prisma.chatMessage.create({
-      data: { roomId, senderId, content, media: { create: files } },
+      data: { roomId, senderId, content, media: { create: files }, ...(replyToId ? { replyToId } : {}) },
       include: MESSAGE_INCLUDE,
     });
   }

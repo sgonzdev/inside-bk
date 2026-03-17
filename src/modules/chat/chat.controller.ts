@@ -39,6 +39,7 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response) => {
     roomId(req),
     req.user!.userId,
     req.body.content,
+    req.body.replyToId,
   );
   res.status(201).json({ status: "success", data: message });
 });
@@ -51,11 +52,14 @@ export const sendMediaMessage = asyncHandler(
 
     const content =
       typeof req.body.content === "string" ? req.body.content.trim() : "";
+    const replyToId =
+      typeof req.body.replyToId === "string" ? req.body.replyToId : undefined;
     const message = await service.sendMediaMessage(
       roomId(req),
       req.user!.userId,
       files,
       content,
+      replyToId,
     );
     res.status(201).json({ status: "success", data: message });
   },

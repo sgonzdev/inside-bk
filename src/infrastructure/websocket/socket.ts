@@ -69,6 +69,29 @@ export function initializeSocket(httpServer: HttpServer): Server {
       }
     });
 
+    // Delivery confirmation — recipient confirms they received the message
+    socket.on(
+      "chat:delivered",
+      async ({ messageId, roomId }: { messageId: string; roomId: string }) => {
+        if (!messageId || !roomId) return;
+        try {
+          const message = await prisma.chatMessage.findUnique({
+            where: { id: messageId },
+            select: { senderId: true },
+          });
+          if (!message) return;
+          // Notify the original sender that their message was delivered
+          io.to(`user:${message.senderId}`).emit("chat:delivered", {
+            messageId,
+            roomId,
+            userId,
+          });
+        } catch (err) {
+          console.error("chat:delivered error", err);
+        }
+      },
+    );
+
     socket.on(
       "chat:typing",
       async ({ roomId, typing }: { roomId: string; typing: boolean }) => {
