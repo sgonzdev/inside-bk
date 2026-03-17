@@ -13,6 +13,7 @@ import * as mediaController from "./diary-media.controller";
 const router = Router();
 
 router.get("/all", authorize("PROFESSIONAL"), controller.getAllForProfessional);
+router.get("/all/:id", authorize("PROFESSIONAL"), validate(diaryParamsSchema, "params"), controller.getByIdForProfessional);
 router.get("/", authorize("STUDENT"), controller.getAll);
 router.get(
   "/:id",

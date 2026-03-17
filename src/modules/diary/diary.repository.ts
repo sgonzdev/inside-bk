@@ -65,6 +65,16 @@ export class DiaryRepository {
     });
   }
 
+  async findByIdForProfessional(id: string) {
+    return prisma.diaryEntry.findUnique({
+      where: { id },
+      include: {
+        media: true,
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+  }
+
   async create(userId: string, data: CreateDiaryInput) {
     return prisma.diaryEntry.create({
       data: { ...data, userId },
