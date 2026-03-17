@@ -27,10 +27,13 @@ model ChatMessage {
   roomId    String   @map("room_id")
   senderId  String   @map("sender_id")
   content   String   @default("")
+  replyToId String?  @map("reply_to_id")
   createdAt DateTime @default(now()) @map("created_at")
 
   room     ChatRoom            @relation(fields: [roomId], references: [id], onDelete: Cascade)
   sender   User                @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo  ChatMessage?        @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies  ChatMessage[]       @relation("MessageReplies")
   media    ChatMessageMedia[]
   receipts MessageReadReceipt[]
 
