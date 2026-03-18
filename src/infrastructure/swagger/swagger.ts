@@ -1300,10 +1300,28 @@ const spec = {
             in: "query",
             schema: { type: "integer", default: 20 },
           },
+          {
+            name: "search",
+            in: "query",
+            description: "Buscar por título o contenido",
+            schema: { type: "string" },
+          },
+          {
+            name: "read",
+            in: "query",
+            description: "Filtrar por estado de lectura: true = leídas, false = no leídas",
+            schema: { type: "boolean" },
+          },
         ],
         responses: {
           "200": { description: "Lista paginada de notificaciones" },
         },
+      },
+      delete: {
+        tags: ["Notifications"],
+        summary: "Eliminar todas las notificaciones (soft delete)",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Todas eliminadas" } },
       },
     },
     "/notifications/read-all": {
@@ -1330,6 +1348,24 @@ const spec = {
         responses: {
           "200": { description: "Notificación marcada" },
           "404": { description: "No encontrada" },
+        },
+      },
+    },
+    "/notifications/{id}": {
+      delete: {
+        tags: ["Notifications"],
+        summary: "Eliminar una notificación (soft delete)",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          "200": { description: "Notificación eliminada" },
         },
       },
     },
