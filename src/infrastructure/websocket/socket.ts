@@ -72,6 +72,16 @@ export function initializeSocket(httpServer: HttpServer): Server {
       try {
         if (!(await isParticipant(roomId, userId))) return;
         await markRoomRead(roomId, userId);
+        await prisma.notification.updateMany({
+          where: {
+            userId,
+            read: false,
+            deletedAt: null,
+            title: "CHAT_NEW_MESSAGE",
+            message: { contains: roomId },
+          },
+          data: { read: true },
+        });
       } catch (err) {
         console.error("chat:open-room error", err);
       }

@@ -20,3 +20,17 @@ export const markAllAsRead = asyncHandler(
     res.json({ status: "success" });
   },
 );
+
+export const deleteNotification = asyncHandler(
+  async (req: Request, res: Response) => {
+    await service.delete(req.params.id as string, req.user!.userId);
+    res.json({ status: "success" });
+  },
+);
+
+export const deleteAllNotifications = asyncHandler(
+  async (req: Request, res: Response) => {
+    await service.deleteAll(req.user!.userId);
+    res.json({ status: "success" });
+  },
+);

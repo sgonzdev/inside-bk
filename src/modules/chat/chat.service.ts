@@ -241,6 +241,7 @@ export class ChatService {
         readAt: new Date(),
       });
     }
+    await this.notifications.markChatNotificationsRead(userId, roomId);
     return { read: count };
   }
 
