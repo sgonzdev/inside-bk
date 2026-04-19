@@ -1,4 +1,7 @@
 import PDFDocument from "pdfkit";
+import path from "path";
+
+const LOGO_PATH = path.join(process.cwd(), "public/logo.png");
 
 const PROGRAM_LABELS: Record<string, string> = {
   SOFTWARE_ENGINEERING: "Ingeniería de Software",
@@ -40,23 +43,25 @@ export function generateConsentPdf(
       : "_______________";
     const representation = options.guardianName ? "mis padres" : "sí mismo";
 
-    // Header
+    // Header with logo
+    doc.image(LOGO_PATH, 60, 40, { width: 80 });
+
     doc
       .fontSize(16)
       .font("Helvetica-Bold")
-      .text("InsideOut Expressions", { align: "center" });
+      .text("InsideOut Expressions", 150, 45, { align: "center" });
     doc
       .fontSize(10)
       .font("Helvetica")
-      .text("Fundación Escuela Tecnológica de Neiva - FET", {
+      .text("Fundación Escuela Tecnológica de Neiva - FET", 150, 65, {
         align: "center",
       });
     doc.moveDown(0.5);
     doc
       .fontSize(13)
       .font("Helvetica-Bold")
-      .text("Consentimiento Informado", { align: "center" });
-    doc.moveDown(1.5);
+      .text("Consentimiento Informado", 60, 95, { align: "center" });
+    doc.moveDown(2.5);
 
     // Consent body
     doc
@@ -90,6 +95,14 @@ export function generateConsentPdf(
     doc.text(
       `Toda la información compartida con el profesional no saldrá del espacio terapéutico, teniendo como salvedad ` +
         `aquella que implique riesgo de vida para el paciente y/o para terceros.`,
+      { align: "justify" },
+    );
+    doc.moveDown();
+
+    doc.text(
+      `En cumplimiento de la Ley 1581 de 2012, autorizo el tratamiento de mis datos personales, incluidos datos ` +
+        `sensibles sobre mi estado emocional y psicológico. Conozco mis derechos a consultar, actualizar, rectificar ` +
+        `y suprimir mis datos conforme a dicha ley.`,
       { align: "justify" },
     );
     doc.moveDown();
