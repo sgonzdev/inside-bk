@@ -30,11 +30,20 @@ const professionals = [
     sex: "MALE" as const,
     program: "OCCUPATIONAL_HEALTH_ADMIN" as const,
   },
+  {
+    email: "carolina@fet.edu.co",
+    firstName: "Carolina",
+    lastName: "Trujillo",
+    idDocument: "1021392690",
+    phone: "3133189871",
+    birthDate: new Date("1998-09-04"),
+    sex: "FEMALE" as const,
+    program: "OCCUPATIONAL_HEALTH_ADMIN" as const,
+  },
 ];
 
 async function main() {
-  const password = await bcrypt.hash("
-    ", 10);
+  const password = await bcrypt.hash("Psico123!", 10);
 
   const createdIds: string[] = [];
 

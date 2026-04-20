@@ -45,7 +45,8 @@ export function requireActive(
       select: { emailVerified: true, consentGiven: true, role: true },
     })
     .then((user) => {
-      if (!user?.emailVerified)
+      if (!user) return next(AppError.unauthorized(codes.AUTH_INVALID_TOKEN));
+      if (!user.emailVerified)
         return next(AppError.forbidden(codes.AUTH_EMAIL_NOT_VERIFIED));
       if (user.role === "STUDENT" && !user.consentGiven)
         return next(AppError.forbidden(codes.CONSENT_REQUIRED));
