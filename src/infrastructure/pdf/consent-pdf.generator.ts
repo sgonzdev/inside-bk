@@ -70,10 +70,10 @@ export function generateConsentPdf(
       .text(
         `Yo ${fullName} con número de documento ${document} perteneciente al programa de ${program} ` +
           `en representación de ${representation} en la FET dejo mi expreso consentimiento para que en caso ` +
-          `de ser necesario pueda recibir el acompañamiento psicológico que ha sido propuesto por el profesional ` +
-          `que me asiste, cuyos encuentros tendrán variación según la naturaleza de mi situación y necesidad, ` +
-          `así como la posible inexistencia de resultados positivos y la indicación de interconsultas con otros ` +
-          `profesionales de la salud en caso de ser necesarias.`,
+          `de ser necesario pueda recibir el acompañamiento psicológico o psicosocial propuesto por el/la ` +
+          `profesional en psicología o en trabajo social que me asiste, cuyos encuentros tendrán variación ` +
+          `según la naturaleza de mi situación y necesidad, así como la posible inexistencia de resultados ` +
+          `positivos y la indicación de interconsultas con otros profesionales de la salud en caso de ser necesarias.`,
         { align: "justify" },
       );
     doc.moveDown();
@@ -101,8 +101,8 @@ export function generateConsentPdf(
 
     doc.text(
       `En cumplimiento de la Ley 1581 de 2012, autorizo el tratamiento de mis datos personales, incluidos datos ` +
-        `sensibles sobre mi estado emocional y psicológico. Conozco mis derechos a consultar, actualizar, rectificar ` +
-        `y suprimir mis datos conforme a dicha ley.`,
+        `sensibles sobre mi estado emocional, psicológico y psicosocial. Conozco mis derechos a consultar, ` +
+        `actualizar, rectificar y suprimir mis datos conforme a dicha ley.`,
       { align: "justify" },
     );
     doc.moveDown();
