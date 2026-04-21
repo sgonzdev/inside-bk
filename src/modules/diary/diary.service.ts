@@ -66,6 +66,7 @@ export class DiaryService {
   async update(id: string, userId: string, data: UpdateDiaryInput) {
     const result = await this.repo.update(id, userId, data);
     if (result.count === 0) throw AppError.notFound("DIARY_NOT_FOUND");
+    if (data.content) void analyzeAndAlert(userId, id, data.content);
     return this.enrichMedia((await this.repo.findById(id, userId))!);
   }
 
