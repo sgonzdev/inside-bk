@@ -29,9 +29,14 @@ export class NotificationsService {
     return this.repo.softDeleteAll(userId);
   }
 
-  async create(data: CreateNotificationInput) {
-    const userPrefs = await this.prefs.get(data.userId);
-    if (!userPrefs.notificationsEnabled) return null;
+  async create(
+    data: CreateNotificationInput,
+    options: { bypassPrefs?: boolean } = {},
+  ) {
+    if (!options.bypassPrefs) {
+      const userPrefs = await this.prefs.get(data.userId);
+      if (!userPrefs.notificationsEnabled) return null;
+    }
 
     const notification = await this.repo.create(data);
 
