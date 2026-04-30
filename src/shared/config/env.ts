@@ -36,7 +36,14 @@ const envSchema = z.object({
   LOGIN_LOCK_MINUTES: z.coerce.number().default(15),
   EMAIL_VERIFICATION_EXPIRES_H: z.coerce.number().default(24),
   PASSWORD_RESET_EXPIRES_MIN: z.coerce.number().default(15),
-  RESEND_API_KEY: z.string().min(1),
+  SMTP_HOST: z.string().min(1),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+  SMTP_USER: z.string().min(1),
+  SMTP_PASSWORD: z.string().min(1),
   EMAIL_FROM: z
     .string()
     .default("InsideOut <noreply@insideoutexpressions.com>"),
