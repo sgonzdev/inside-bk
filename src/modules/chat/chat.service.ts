@@ -298,16 +298,23 @@ export class ChatService {
       senderName: `${sender.firstName} ${sender.lastName}`,
       preview,
     });
-    await Promise.allSettled(
-      participantIds
-        .filter((id) => id !== senderId)
-        .map((userId) =>
-          this.notifications.create({
-            userId,
-            title: "CHAT_NEW_MESSAGE",
-            message,
-          }),
-        ),
+    const recipients = participantIds.filter((id) => id !== senderId);
+    const results = await Promise.allSettled(
+      recipients.map((userId) =>
+        this.notifications.create({
+          userId,
+          title: "CHAT_NEW_MESSAGE",
+          message,
+        }),
+      ),
     );
+    results.forEach((r, i) => {
+      if (r.status === "rejected") {
+        console.error(
+          `[chat] room=${roomId} no se pudo notificar a ${recipients[i]}:`,
+          r.reason,
+        );
+      }
+    });
   }
 }

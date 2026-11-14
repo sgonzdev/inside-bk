@@ -268,8 +268,10 @@ export class AuthService {
   async forgotPassword(data: ForgotPasswordInput) {
     const user = await this.repo.findByEmailForReset(data.email);
 
-    // Respuesta siempre exitosa — no revelar si el email existe
-    if (!user) return;
+    // Se avisa que el correo no tiene cuenta en vez de fingir que se envió.
+    // Ocultarlo no protegía nada: el registro ya revela si un correo existe
+    // (AUTH_EMAIL_EXISTS). El rate limit por correo e IP frena el sondeo masivo.
+    if (!user) throw AppError.notFound(codes.AUTH_EMAIL_NOT_REGISTERED);
 
     // Se envía el enlace de restablecer esté o no verificada la cuenta: el
     // enlace llega al buzón, así que usarlo prueba que el correo es del

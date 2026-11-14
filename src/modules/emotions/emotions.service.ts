@@ -78,8 +78,9 @@ export class EmotionsService {
         { temperature: 0.8, maxTokens: 256 },
       );
       aiFeedback = response.content;
-    } catch {
-      console.error("AI feedback generation failed, proceeding without it.");
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      console.error(`AI feedback generation failed (${reason}), proceeding without it.`);
     }
 
     return this.repo.createLog(userId, { ...data, aiFeedback });
