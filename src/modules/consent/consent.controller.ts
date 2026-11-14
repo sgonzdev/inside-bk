@@ -6,10 +6,8 @@ const service = new ConsentService();
 
 export const sign = asyncHandler(async (req: Request, res: Response) => {
   const { userId } = req.user!;
-  const ip =
-    (req.headers["x-forwarded-for"] as string) ??
-    req.socket.remoteAddress ??
-    "unknown";
+  // Con trust proxy, req.ip es la IP real del cliente (no un header falsificable)
+  const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
   await service.sign(userId, req.body, ip);
   res.status(201).json({ status: "success" });
 });

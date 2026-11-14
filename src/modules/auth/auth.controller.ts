@@ -11,10 +11,8 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
-  const ip =
-    (req.headers["x-forwarded-for"] as string) ??
-    req.socket.remoteAddress ??
-    "unknown";
+  // Con trust proxy, req.ip es la IP real del cliente (no un header falsificable)
+  const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
   const userAgent = req.headers["user-agent"];
   const result = await service.login(req.body, ip, userAgent);
   res.json({ status: "success", data: result });
