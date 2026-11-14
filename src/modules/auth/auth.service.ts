@@ -7,7 +7,8 @@ import { RegisterInput, LoginInput, ForgotPasswordInput, ResetPasswordInput } fr
 import { AppError } from "../../shared/errors/app-error";
 import * as codes from "../../shared/errors/error-codes";
 import { env } from "../../shared/config/env";
-import { sendEmail } from "../../infrastructure/email/email.service";
+import { Prisma } from "@prisma/client";
+import { sendEmailInBackground } from "../../infrastructure/email/email.service";
 import { verifyEmailTemplate } from "../../infrastructure/email/templates/verify-email.template";
 import { resetPasswordTemplate } from "../../infrastructure/email/templates/reset-password.template";
 
@@ -25,18 +26,49 @@ function parseExpiry(expiry: string): Date {
 export class AuthService {
   constructor(private readonly repo = new AuthRepository()) {}
 
+  /**
+   * Dos registros simultáneos con el mismo correo (doble envío, reintento por
+   * red lenta) chocaban con el índice único de email y devolvían 500.
+   * Ahora el segundo se trata como re-registro.
+   */
+  private async createOrUpdateOnRace(data: RegisterInput, hashedPassword: string) {
+    try {
+      return await this.repo.create({ ...data, password: hashedPassword });
+    } catch (error) {
+      if (
+        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+        error.code !== "P2002"
+      ) {
+        throw error;
+      }
+      const existing = await this.repo.findByEmail(data.email);
+      if (!existing || existing.emailVerified) {
+        throw AppError.conflict(codes.AUTH_EMAIL_EXISTS);
+      }
+      return this.repo.updateUnverified(existing.id, {
+        ...data,
+        password: hashedPassword,
+      });
+    }
+  }
+
   async register(data: RegisterInput) {
     const existing = await this.repo.findByEmail(data.email);
 
     if (existing?.emailVerified)
       throw AppError.conflict(codes.AUTH_EMAIL_EXISTS);
 
-    const user =
-      existing ??
-      (await this.repo.create({
-        ...data,
-        password: await bcrypt.hash(data.password, env.BCRYPT_ROUNDS),
-      }));
+    // Si la cuenta existe pero no está verificada, el re-registro reemplaza
+    // contraseña y datos (antes se conservaban los del primer registro y el
+    // usuario recibía 401 al entrar con la contraseña nueva). Solo el dueño del
+    // correo puede activarla, y el enlace anterior queda invalidado abajo.
+    const hashedPassword = await bcrypt.hash(data.password, env.BCRYPT_ROUNDS);
+    const user = existing
+      ? await this.repo.updateUnverified(existing.id, {
+          ...data,
+          password: hashedPassword,
+        })
+      : await this.createOrUpdateOnRace(data, hashedPassword);
 
     await this.repo.deleteVerificationTokensByUser(
       user.id,
@@ -60,16 +92,22 @@ export class AuthService {
         ? "Verify your email - InsideOut Expressions"
         : "Verifica tu correo - InsideOut Expressions";
 
-    await sendEmail({
-      to: user.email,
-      subject,
-      html: verifyEmailTemplate(
-        user.firstName,
-        verificationUrl,
-        language,
-        env.EMAIL_VERIFICATION_EXPIRES_H,
-      ),
-    });
+    // No se espera al SMTP: el registro ya quedó guardado. Si el correo no
+    // llega, el usuario se vuelve a registrar y recibe un enlace nuevo.
+    sendEmailInBackground(
+      {
+        to: user.email,
+        subject,
+        html: verifyEmailTemplate(
+          user.firstName,
+          verificationUrl,
+          language,
+          env.EMAIL_VERIFICATION_EXPIRES_H,
+          data.idDocument.slice(-4),
+        ),
+      },
+      "verify-email",
+    );
 
     return {
       code: codes.AUTH_REGISTER_SUCCESS,
@@ -94,21 +132,9 @@ export class AuthService {
       throw AppError.badRequest(codes.AUTH_VERIFICATION_TOKEN_INVALID);
     }
 
-    await this.repo.markEmailVerified(record.userId);
-    await this.repo.deleteVerificationToken(record.id);
-
-    const user = await this.repo.findById(record.userId);
+    // activateAccount borra también este token (y cualquier otro de verificación)
+    const user = await this.activateAccount(record.userId);
     if (!user) throw AppError.badRequest(codes.AUTH_VERIFICATION_TOKEN_INVALID);
-
-    if (user.role === "STUDENT") {
-      const professionals = await this.repo.findAllProfessionals();
-      if (professionals.length) {
-        await this.repo.createChatRoomsForStudent(
-          user.id,
-          professionals.map((p) => p.id),
-        );
-      }
-    }
 
     const payload = { userId: user.id, role: user.role };
     const accessToken = jwt.sign(payload, env.JWT_SECRET, {
@@ -245,26 +271,11 @@ export class AuthService {
     // Respuesta siempre exitosa — no revelar si el email existe
     if (!user) return;
 
-    // Si el usuario existe pero no verifico email, re-enviar el correo
-    // de verificacion (con token nuevo) en vez del de reset.
-    if (!user.emailVerified) {
-      await this.repo.deleteVerificationTokensByUser(user.id, TokenType.EMAIL_VERIFICATION);
-      const vToken = crypto.randomUUID();
-      const vExpiresAt = new Date(Date.now() + env.EMAIL_VERIFICATION_EXPIRES_H * 60 * 60 * 1000);
-      await this.repo.createVerificationToken(vToken, user.id, TokenType.EMAIL_VERIFICATION, vExpiresAt);
-      const vUrl = `${env.FRONTEND_URL}/verify-email?token=${vToken}`;
-      try {
-        await sendEmail({
-          to: data.email,
-          subject: "Verifica tu correo - InsideOut Expressions",
-          html: verifyEmailTemplate(user.firstName, vUrl, "ES", env.EMAIL_VERIFICATION_EXPIRES_H),
-        });
-      } catch (err) {
-        console.error("[forgotPassword] sendEmail (verification) failed:", err);
-      }
-      return;
-    }
-
+    // Se envía el enlace de restablecer esté o no verificada la cuenta: el
+    // enlace llega al buzón, así que usarlo prueba que el correo es del
+    // usuario y resetPassword activa la cuenta si aún no lo estaba. Así un
+    // usuario que no recibió (o perdió) el correo de verificación, u olvidó la
+    // contraseña con la que se registró, sale del bloqueo en un solo paso.
     await this.repo.deleteVerificationTokensByUser(user.id, TokenType.PASSWORD_RESET);
 
     const token = crypto.randomUUID();
@@ -272,15 +283,14 @@ export class AuthService {
     await this.repo.createVerificationToken(token, user.id, TokenType.PASSWORD_RESET, expiresAt);
 
     const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${token}`;
-    try {
-      await sendEmail({
+    sendEmailInBackground(
+      {
         to: data.email,
         subject: "Restablece tu contraseña - InsideOut Expressions",
         html: resetPasswordTemplate(user.firstName, resetUrl, "ES", env.PASSWORD_RESET_EXPIRES_MIN),
-      });
-    } catch (err) {
-      console.error("[forgotPassword] sendEmail (reset) failed:", err);
-    }
+      },
+      "reset-password",
+    );
   }
 
   async resetPassword(data: ResetPasswordInput) {
@@ -292,7 +302,12 @@ export class AuthService {
     }
 
     const current = await this.repo.findPasswordHash(record.userId);
-    if (current && await bcrypt.compare(data.password, current.password)) {
+    // En una cuenta sin activar no se bloquea reusar la contraseña: puede ser
+    // justo la que el usuario eligió al registrarse y solo quiere entrar.
+    if (
+      current?.emailVerified &&
+      (await bcrypt.compare(data.password, current.password))
+    ) {
       throw AppError.badRequest(codes.AUTH_PASSWORD_SAME_AS_CURRENT);
     }
 
@@ -302,5 +317,31 @@ export class AuthService {
       this.repo.deleteVerificationToken(record.id),
       this.repo.deleteAllUserRefreshTokens(record.userId),
     ]);
+
+    if (current && !current.emailVerified) {
+      await this.activateAccount(record.userId);
+    }
+  }
+
+  /**
+   * Marca el correo como verificado y crea lo que una cuenta activa necesita
+   * (salas de chat del estudiante con cada profesional). Lo usan la
+   * verificación de correo y el restablecimiento de contraseña.
+   */
+  private async activateAccount(userId: string) {
+    await this.repo.markEmailVerified(userId);
+    await this.repo.deleteVerificationTokensByUser(userId, TokenType.EMAIL_VERIFICATION);
+
+    const user = await this.repo.findById(userId);
+    if (user?.role === "STUDENT") {
+      const professionals = await this.repo.findAllProfessionals();
+      if (professionals.length) {
+        await this.repo.createChatRoomsForStudent(
+          user.id,
+          professionals.map((p) => p.id),
+        );
+      }
+    }
+    return user;
   }
 }

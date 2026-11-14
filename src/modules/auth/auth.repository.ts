@@ -61,6 +61,42 @@ export class AuthRepository {
     });
   }
 
+  /**
+   * Re-registro de una cuenta que aún no verificó su correo: se reemplazan
+   * contraseña y datos con los del nuevo registro. El filtro emailVerified:false
+   * garantiza que nunca se pise una cuenta ya activa.
+   */
+  async updateUnverified(userId: string, data: RegisterInput & { password: string }) {
+    return prisma.user.update({
+      where: { id: userId, emailVerified: false },
+      data: {
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+        program: data.program,
+        birthDate: data.birthDate,
+        phone: data.phone ?? null,
+        idDocument: data.idDocument,
+        sex: data.sex ?? null,
+        preferences: {
+          upsert: {
+            create: { language: data.language },
+            update: { language: data.language },
+          },
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+  }
+
   async saveRefreshToken(token: string, userId: string, expiresAt: Date) {
     return prisma.refreshToken.create({
       data: { token, userId, expiresAt },
@@ -147,7 +183,7 @@ export class AuthRepository {
   async findPasswordHash(userId: string) {
     return prisma.user.findUnique({
       where: { id: userId },
-      select: { password: true },
+      select: { password: true, emailVerified: true },
     });
   }
 
