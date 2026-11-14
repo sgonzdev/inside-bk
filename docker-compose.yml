@@ -1,6 +1,20 @@
 services:
+  redis:
+    image: redis:7.2-alpine
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   postgres:
     image: postgres:16-alpine
+    restart: always
     environment:
       POSTGRES_USER: insideout
       POSTGRES_PASSWORD: insideout_secret
@@ -17,6 +31,7 @@ services:
 
   minio:
     image: minio/minio:latest
+    restart: always
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -34,6 +49,7 @@ services:
 
   app:
     build: .
+    restart: always
     ports:
       - "${PORT:-3000}:3000"
     env_file:
@@ -46,6 +62,8 @@ services:
       postgres:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: sh -c "npx prisma db push && npm run dev"
 
@@ -61,10 +79,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: sh -c "npx prisma studio --port 5555 --hostname 0.0.0.0 --browser none"
+    command: sh -c "npx prisma generate && npx prisma studio --port 5555 --hostname 0.0.0.0 --browser none"
     profiles:
       - dev
 
 volumes:
   postgres_data:
   minio_data:
+  redis_data:

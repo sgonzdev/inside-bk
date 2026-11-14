@@ -22,6 +22,7 @@ export const sendMessageSchema = z.object({
     .string()
     .min(1, codes.FIELD_REQUIRED)
     .max(2000, codes.CHAT_MESSAGE_TOO_LONG),
+  replyToId: z.string().uuid(codes.VALIDATION_ERROR).optional(),
 });
 
 export const roomParamsSchema = z.object({

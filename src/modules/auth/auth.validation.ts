@@ -34,10 +34,10 @@ export const registerSchema = z.object({
     .optional(),
   idDocument: z
     .string()
-    .regex(/^\d{5,10}$/, codes.ID_DOCUMENT_INVALID)
-    .optional(),
+    .min(1, codes.FIELD_REQUIRED)
+    .regex(/^\d{5,10}$/, codes.ID_DOCUMENT_INVALID),
   sex: z.enum(SEXES).optional(),
-  program: z.enum(PROGRAMS).optional(),
+  program: z.enum(PROGRAMS, { errorMap: () => ({ message: codes.FIELD_REQUIRED }) }),
   birthDate: z.coerce
     .date()
     .refine(
@@ -77,5 +77,26 @@ export const logoutSchema = z.object({
   refreshToken: z.string().min(1, codes.FIELD_REQUIRED),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .min(1, codes.FIELD_REQUIRED)
+    .email(codes.EMAIL_INVALID)
+    .refine((e) => e.endsWith("@fet.edu.co"), { message: codes.AUTH_INVALID_DOMAIN }),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, codes.FIELD_REQUIRED),
+  password: z
+    .string()
+    .min(8, codes.PASS_MIN_LENGTH)
+    .regex(/[A-Z]/, codes.PASS_UPPERCASE)
+    .regex(/[a-z]/, codes.PASS_LOWERCASE)
+    .regex(/[0-9]/, codes.PASS_NUMBER)
+    .regex(/[^A-Za-z0-9]/, codes.PASS_SPECIAL),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

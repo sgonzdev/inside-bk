@@ -1,6 +1,11 @@
 import { EmotionsRepository } from "./emotions.repository";
 import { LogEmotionInput, StatsQuery } from "./emotions.validation";
 import { AppError } from "../../shared/errors/app-error";
+import {
+  EMOTION_NOT_FOUND,
+  EMOTION_COOLDOWN,
+  EMOTION_DAILY_LIMIT,
+} from "../../shared/errors/error-codes";
 import { createAIProvider } from "../../infrastructure/ai";
 import { PreferencesService } from "../preferences/preferences.service";
 import {
@@ -10,6 +15,10 @@ import {
 } from "../../shared/utils/pagination";
 
 const LANG_LABEL: Record<string, string> = { ES: "Spanish", EN: "English" };
+
+const COOLDOWN_SECONDS = 60;
+const DAILY_LIMIT = 10;
+const SAME_EMOTION_WINDOW_MS = 60 * 60 * 1000;
 
 export class EmotionsService {
   constructor(
@@ -23,7 +32,34 @@ export class EmotionsService {
 
   async logEmotion(userId: string, data: LogEmotionInput) {
     const emotion = await this.repo.findEmotionById(data.emotionId);
-    if (!emotion) throw AppError.notFound("EMOTION_NOT_FOUND");
+    if (!emotion) throw AppError.notFound(EMOTION_NOT_FOUND);
+
+    const lastLog = await this.repo.findLastLog(userId);
+    if (lastLog) {
+      const elapsed = Date.now() - lastLog.createdAt.getTime();
+      if (elapsed < COOLDOWN_SECONDS * 1000) {
+        throw AppError.badRequest(EMOTION_COOLDOWN);
+      }
+    }
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const todayCount = await this.repo.countLogsSince(userId, startOfDay);
+    if (todayCount >= DAILY_LIMIT) {
+      throw AppError.badRequest(EMOTION_DAILY_LIMIT);
+    }
+
+    const lastSame = await this.repo.findLastLog(userId, data.emotionId);
+    if (
+      lastSame &&
+      lastSame.aiFeedback &&
+      Date.now() - lastSame.createdAt.getTime() < SAME_EMOTION_WINDOW_MS
+    ) {
+      return this.repo.createLog(userId, {
+        ...data,
+        aiFeedback: lastSame.aiFeedback,
+      });
+    }
 
     let aiFeedback: string | undefined;
     try {

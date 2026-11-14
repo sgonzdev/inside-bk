@@ -45,6 +45,12 @@ export class DiaryService {
     return paginate(enriched, total, page, limit);
   }
 
+  async getByIdForProfessional(id: string) {
+    const entry = await this.repo.findByIdForProfessional(id);
+    if (!entry) throw AppError.notFound("DIARY_NOT_FOUND");
+    return this.enrichMedia(entry);
+  }
+
   async getById(id: string, userId: string) {
     const entry = await this.repo.findById(id, userId);
     if (!entry) throw AppError.notFound("DIARY_NOT_FOUND");
@@ -60,6 +66,7 @@ export class DiaryService {
   async update(id: string, userId: string, data: UpdateDiaryInput) {
     const result = await this.repo.update(id, userId, data);
     if (result.count === 0) throw AppError.notFound("DIARY_NOT_FOUND");
+    if (data.content) void analyzeAndAlert(userId, id, data.content);
     return this.enrichMedia((await this.repo.findById(id, userId))!);
   }
 

@@ -80,7 +80,15 @@ export class ChatService {
       limit,
       query.search,
     );
-    return paginate(data, total, page, limit);
+    const enriched = data.map((room) => {
+      if (room.name) return room;
+      const other = room.participants.find((p) => p.userId !== userId);
+      const displayName = other
+        ? `${other.user.firstName} ${other.user.lastName}`
+        : "Chat";
+      return { ...room, displayName };
+    });
+    return paginate(enriched, total, page, limit);
   }
 
   async getMessages(
@@ -137,12 +145,13 @@ export class ChatService {
     );
   }
 
-  async sendMessage(roomId: string, senderId: string, content: string) {
+  async sendMessage(roomId: string, senderId: string, content: string, replyToId?: string) {
     await this.ensureParticipant(roomId, senderId);
     const message = (await this.repo.createMessage(
       roomId,
       senderId,
       content,
+      replyToId,
     )) as {
       id: string;
       roomId: string;
@@ -154,7 +163,7 @@ export class ChatService {
       receipts: unknown[];
     };
     const participantIds = await this.repo.getRoomParticipantIds(roomId);
-    this.broadcast(participantIds, "chat:message", message);
+    await this.broadcastMessage(participantIds, senderId, message);
     await this.notifyUnread(
       participantIds,
       senderId,
@@ -170,6 +179,7 @@ export class ChatService {
     senderId: string,
     files: Express.Multer.File[],
     content = "",
+    replyToId?: string,
   ) {
     await this.ensureParticipant(roomId, senderId);
 
@@ -188,6 +198,7 @@ export class ChatService {
       senderId,
       uploaded,
       content,
+      replyToId,
     )) as {
       id: string;
       roomId: string;
@@ -208,7 +219,7 @@ export class ChatService {
     };
 
     const participantIds = await this.repo.getRoomParticipantIds(roomId);
-    this.broadcast(participantIds, "chat:message", enriched);
+    await this.broadcastMessage(participantIds, senderId, enriched);
     await this.notifyUnread(
       participantIds,
       senderId,
@@ -230,6 +241,7 @@ export class ChatService {
         readAt: new Date(),
       });
     }
+    await this.notifications.markChatNotificationsRead(userId, roomId);
     return { read: count };
   }
 
@@ -241,6 +253,35 @@ export class ChatService {
   private broadcast(participantIds: string[], event: string, payload: unknown) {
     const io = getIO();
     for (const pid of participantIds) io.to(`user:${pid}`).emit(event, payload);
+  }
+
+  /**
+   * Broadcast a chat:message and auto-detect delivery.
+   * For each recipient that has active WebSocket connections,
+   * immediately emit chat:delivered back to the sender.
+   */
+  private async broadcastMessage(
+    participantIds: string[],
+    senderId: string,
+    message: { id: string; roomId: string; [key: string]: unknown },
+  ) {
+    const io = getIO();
+    // Send message to all participants
+    for (const pid of participantIds)
+      io.to(`user:${pid}`).emit("chat:message", message);
+
+    // Check which recipients are online and confirm delivery
+    const recipients = participantIds.filter((pid) => pid !== senderId);
+    for (const rid of recipients) {
+      const sockets = await io.in(`user:${rid}`).fetchSockets();
+      if (sockets.length > 0) {
+        io.to(`user:${senderId}`).emit("chat:delivered", {
+          messageId: message.id,
+          roomId: message.roomId,
+          userId: rid,
+        });
+      }
+    }
   }
 
   private async notifyUnread(

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../../shared/middleware/auth";
 import { validate } from "../../shared/middleware/validate";
+import { emotionLogLimiter } from "../../shared/middleware/rate-limiter";
 import { logEmotionSchema, statsQuerySchema } from "./emotions.validation";
 import * as controller from "./emotions.controller";
 
@@ -11,6 +12,7 @@ router.use(authenticate);
 router.post(
   "/log",
   authorize("STUDENT"),
+  emotionLogLimiter,
   validate(logEmotionSchema),
   controller.logEmotion,
 );

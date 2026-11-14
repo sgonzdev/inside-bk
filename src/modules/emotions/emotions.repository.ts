@@ -11,6 +11,20 @@ export class EmotionsRepository {
     return prisma.emotion.findUnique({ where: { id } });
   }
 
+  async findLastLog(userId: string, emotionId?: string) {
+    return prisma.emotionLog.findFirst({
+      where: { userId, ...(emotionId ? { emotionId } : {}) },
+      orderBy: { createdAt: "desc" },
+      include: { emotion: true },
+    });
+  }
+
+  async countLogsSince(userId: string, since: Date) {
+    return prisma.emotionLog.count({
+      where: { userId, createdAt: { gte: since } },
+    });
+  }
+
   async createLog(
     userId: string,
     data: LogEmotionInput & { aiFeedback?: string },

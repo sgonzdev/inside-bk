@@ -10,6 +10,10 @@ import swaggerRouter from "./infrastructure/swagger/swagger";
 
 const app = express();
 
+// La API está detrás de nginx: sin esto req.ip es la IP de nginx para todos
+// y el rate limit lo comparte toda la plataforma.
+app.set("trust proxy", env.TRUST_PROXY);
+
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
 app.use(express.json({ limit: "500kb" }));
 app.use(cookieParser());

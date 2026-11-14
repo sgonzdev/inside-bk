@@ -14,15 +14,29 @@ export class NotificationsService {
     private readonly prefs = new PreferencesService(),
   ) {}
 
-  async getAll(userId: string, query: PaginationQuery) {
+  async getAll(userId: string, query: PaginationQuery & { search?: string; read?: string }) {
     const { page, limit, skip } = parsePagination(query);
-    const { data, total } = await this.repo.findByUser(userId, skip, limit);
+    const read = query.read === "true" ? true : query.read === "false" ? false : undefined;
+    const { data, total } = await this.repo.findByUser(userId, skip, limit, query.search, read);
     return paginate(data, total, page, limit);
   }
 
-  async create(data: CreateNotificationInput) {
-    const userPrefs = await this.prefs.get(data.userId);
-    if (!userPrefs.notificationsEnabled) return null;
+  async delete(id: string, userId: string) {
+    return this.repo.softDelete(id, userId);
+  }
+
+  async deleteAll(userId: string) {
+    return this.repo.softDeleteAll(userId);
+  }
+
+  async create(
+    data: CreateNotificationInput,
+    options: { bypassPrefs?: boolean } = {},
+  ) {
+    if (!options.bypassPrefs) {
+      const userPrefs = await this.prefs.get(data.userId);
+      if (!userPrefs.notificationsEnabled) return null;
+    }
 
     const notification = await this.repo.create(data);
 
@@ -42,5 +56,9 @@ export class NotificationsService {
 
   async markAllAsRead(userId: string) {
     return this.repo.markAllAsRead(userId);
+  }
+
+  async markChatNotificationsRead(userId: string, roomId: string) {
+    return this.repo.markChatNotificationsRead(userId, roomId);
   }
 }

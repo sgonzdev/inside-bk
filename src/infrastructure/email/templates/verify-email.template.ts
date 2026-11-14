@@ -5,17 +5,25 @@ const translations = {
     greeting: (name: string) => `Hola, ${name}`,
     body: 'Gracias por registrarte en <strong>InsideOut Expressions</strong>.<br/>Confirma tu correo institucional para activar tu cuenta.',
     button: 'Verificar correo',
+    document: (last4: string) => `Registro con documento terminado en <strong>${last4}</strong>. Si no reconoces este dato, no verifiques: alguien más usó tu correo.`,
     footer: (hours: number) => `Este enlace expira en ${hours} hora${hours !== 1 ? 's' : ''}.<br/>Si no creaste esta cuenta, ignora este mensaje.`,
   },
   EN: {
     greeting: (name: string) => `Hi, ${name}`,
     body: 'Thank you for signing up for <strong>InsideOut Expressions</strong>.<br/>Confirm your institutional email to activate your account.',
     button: 'Verify email',
+    document: (last4: string) => `Registration with ID document ending in <strong>${last4}</strong>. If you don't recognize it, don't verify: someone else used your email.`,
     footer: (hours: number) => `This link expires in ${hours} hour${hours !== 1 ? 's' : ''}.<br/>If you didn't create this account, ignore this email.`,
   },
 };
 
-export function verifyEmailTemplate(firstName: string, verificationUrl: string, language: Language, expiresInHours: number): string {
+export function verifyEmailTemplate(
+  firstName: string,
+  verificationUrl: string,
+  language: Language,
+  expiresInHours: number,
+  documentLast4?: string,
+): string {
   const t = translations[language];
 
   return `
@@ -45,6 +53,7 @@ export function verifyEmailTemplate(firstName: string, verificationUrl: string, 
             <td style="padding:36px 32px 24px;">
               <h2 style="margin:0 0 12px;font-size:20px;color:#ffffff;">${t.greeting(firstName)}</h2>
               <p style="margin:0 0 28px;font-size:15px;color:#9ca3af;line-height:1.7;">${t.body}</p>
+              ${documentLast4 ? `<p style="margin:-12px 0 28px;font-size:13px;color:#9ca3af;line-height:1.6;">${t.document(documentLast4)}</p>` : ''}
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center">

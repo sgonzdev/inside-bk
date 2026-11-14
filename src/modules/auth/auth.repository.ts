@@ -14,6 +14,23 @@ export class AuthRepository {
         lastName: true,
         role: true,
         emailVerified: true,
+        consentGiven: true,
+      },
+    });
+  }
+
+  async findById(id: string) {
+    return prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        program: true,
+        birthDate: true,
+        idDocument: true,
       },
     });
   }
@@ -32,6 +49,42 @@ export class AuthRepository {
         idDocument: data.idDocument,
         sex: data.sex,
         preferences: { create: { language: data.language } },
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  /**
+   * Re-registro de una cuenta que aún no verificó su correo: se reemplazan
+   * contraseña y datos con los del nuevo registro. El filtro emailVerified:false
+   * garantiza que nunca se pise una cuenta ya activa.
+   */
+  async updateUnverified(userId: string, data: RegisterInput & { password: string }) {
+    return prisma.user.update({
+      where: { id: userId, emailVerified: false },
+      data: {
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        role: data.role,
+        program: data.program,
+        birthDate: data.birthDate,
+        phone: data.phone ?? null,
+        idDocument: data.idDocument,
+        sex: data.sex ?? null,
+        preferences: {
+          upsert: {
+            create: { language: data.language },
+            update: { language: data.language },
+          },
+        },
       },
       select: {
         id: true,
@@ -118,5 +171,47 @@ export class AuthRepository {
       orderBy: { createdAt: "desc" },
       take: 10,
     });
+  }
+
+  async findByEmailForReset(email: string) {
+    return prisma.user.findUnique({
+      where: { email },
+      select: { id: true, firstName: true, emailVerified: true },
+    });
+  }
+
+  async findPasswordHash(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+      select: { password: true, emailVerified: true },
+    });
+  }
+
+  async updatePassword(userId: string, hashedPassword: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+  }
+
+  async findAllProfessionals() {
+    return prisma.user.findMany({
+      where: { role: "PROFESSIONAL" },
+      select: { id: true },
+    });
+  }
+
+  async createChatRoomsForStudent(studentId: string, professionalIds: string[]) {
+    await Promise.all(
+      professionalIds.map((profId) =>
+        prisma.chatRoom.create({
+          data: {
+            participants: {
+              create: [{ userId: studentId }, { userId: profId }],
+            },
+          },
+        }),
+      ),
+    );
   }
 }

@@ -3,7 +3,7 @@ import { UpdatePreferencesInput } from "./preferences.validation";
 
 const DEFAULTS = {
   language: "ES" as const,
-  theme: "DARK" as const,
+  theme: "LIGHT" as const,
   notificationsEnabled: true,
 };
 

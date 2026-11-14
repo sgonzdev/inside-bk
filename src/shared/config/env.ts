@@ -21,10 +21,25 @@ const envSchema = z.object({
   DEEPSEEK_API_KEY: z.string().optional(),
   BCRYPT_ROUNDS: z.coerce.number().default(12),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  REDIS_URL: z.string().default("redis://redis:6379"),
   RATE_LIMIT_GENERAL_WINDOW_MS: z.coerce.number().default(60_000),
+  // Por usuario autenticado (antes era por IP y lo compartía toda la plataforma)
   RATE_LIMIT_GENERAL_MAX: z.coerce.number().default(100),
+  // Peticiones sin sesión, por IP. Alto porque una universidad entera sale
+  // a internet por una sola IP pública (NAT)
+  RATE_LIMIT_GENERAL_ANON_MAX: z.coerce.number().default(600),
+  // Intentos de login/registro/recuperación por CORREO
   RATE_LIMIT_AUTH_WINDOW_MS: z.coerce.number().default(60_000),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().default(10),
+  // Tope de intentos de auth por IP (frena a quien prueba muchos correos)
+  RATE_LIMIT_AUTH_IP_WINDOW_MS: z.coerce.number().default(15 * 60_000),
+  RATE_LIMIT_AUTH_IP_MAX: z.coerce.number().default(300),
+  // Saltos de proxy delante de Express (nginx = 1). Sin esto req.ip es la IP
+  // de nginx y todos los usuarios comparten el mismo contador.
+  TRUST_PROXY: z
+    .string()
+    .default("1")
+    .transform((v) => (/^\d+$/.test(v) ? Number(v) : v === "true" ? true : v === "false" ? false : v)),
   S3_ENDPOINT: z.string().url(),
   S3_ACCESS_KEY: z.string().min(1),
   S3_SECRET_KEY: z.string().min(1),
@@ -34,7 +49,15 @@ const envSchema = z.object({
   LOGIN_MAX_ATTEMPTS: z.coerce.number().default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().default(15),
   EMAIL_VERIFICATION_EXPIRES_H: z.coerce.number().default(24),
-  RESEND_API_KEY: z.string().min(1),
+  PASSWORD_RESET_EXPIRES_MIN: z.coerce.number().default(15),
+  SMTP_HOST: z.string().min(1),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+  SMTP_USER: z.string().min(1),
+  SMTP_PASSWORD: z.string().min(1),
   EMAIL_FROM: z
     .string()
     .default("InsideOut <noreply@insideoutexpressions.com>"),

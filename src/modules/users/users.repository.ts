@@ -10,6 +10,8 @@ const selectFields = {
   program: true,
   birthDate: true,
   avatarUrl: true,
+  emailVerified: true,
+  consentGiven: true,
   createdAt: true,
 };
 

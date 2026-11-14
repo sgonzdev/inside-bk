@@ -10,6 +10,9 @@ export const AUTH_VERIFICATION_TOKEN_INVALID =
   "AUTH_VERIFICATION_TOKEN_INVALID"; // Token de verificación inválido o expirado
 export const AUTH_EMAIL_VERIFIED = "AUTH_EMAIL_VERIFIED"; // Correo verificado correctamente
 export const AUTH_REGISTER_SUCCESS = "AUTH_REGISTER_SUCCESS"; // Registro exitoso, correo de verificación enviado
+export const AUTH_RESET_TOKEN_INVALID = "AUTH_RESET_TOKEN_INVALID"; // Token de recuperación inválido o expirado
+export const AUTH_PASSWORD_RESET_SUCCESS = "AUTH_PASSWORD_RESET_SUCCESS"; // Contraseña restablecida correctamente
+export const AUTH_PASSWORD_SAME_AS_CURRENT = "AUTH_PASSWORD_SAME_AS_CURRENT"; // La nueva contraseña no puede ser igual a la anterior
 
 // ── Validation: password ─────────────────────────────
 export const PASS_MIN_LENGTH = "PASS_MIN_LENGTH"; // La contraseña debe tener al menos 8 caracteres
@@ -41,6 +44,8 @@ export const AI_CONFIG_ERROR = "AI_CONFIG_ERROR"; // Configuración de IA invál
 
 // ── Emotions ─────────────────────────────────────────
 export const EMOTION_NOT_FOUND = "EMOTION_NOT_FOUND"; // La emoción especificada no existe
+export const EMOTION_COOLDOWN = "EMOTION_COOLDOWN"; // Debes esperar antes de registrar otra emoción
+export const EMOTION_DAILY_LIMIT = "EMOTION_DAILY_LIMIT"; // Límite diario de registros de emoción alcanzado
 export const STATS_AGE_RANGE_INVALID = "STATS_AGE_RANGE_INVALID"; // ageMin no puede ser mayor que ageMax
 export const STATS_DATE_RANGE_INVALID = "STATS_DATE_RANGE_INVALID"; // from no puede ser posterior a to
 
