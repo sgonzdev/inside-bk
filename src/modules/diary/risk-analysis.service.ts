@@ -2,7 +2,7 @@ import { createAIProvider } from "../../infrastructure/ai";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NOTIF_DIARY_RISK_ALERT } from "../../shared/errors/error-codes";
 import prisma from "../../infrastructure/database/prisma";
-import { sendEmail } from "../../infrastructure/email/email.service";
+import { sendEmailInBackground } from "../../infrastructure/email/email.service";
 import {
   diaryRiskAlertSubject,
   diaryRiskAlertTemplate,
@@ -59,33 +59,49 @@ export async function analyzeAndAlert(
     const detectedAt = new Date();
     const notificationsUrl = `${env.FRONTEND_URL}/notifications`;
 
-    await Promise.allSettled(
-      professionals.flatMap((pro) => {
-        const lang = (pro.preferences?.language ?? "ES") as Language;
-        return [
-          notificationsService.create(
-            {
-              userId: pro.id,
-              title: NOTIF_DIARY_RISK_ALERT,
-              message,
-            },
-            { bypassPrefs: true },
-          ),
-          sendEmail({
-            to: pro.email,
-            subject: diaryRiskAlertSubject(lang),
-            html: diaryRiskAlertTemplate(
-              pro.firstName,
-              userName,
-              preview,
-              detectedAt,
-              notificationsUrl,
-              lang,
-            ),
-          }),
-        ];
-      }),
+    // Notificación en la app: se registran los fallos (antes allSettled los
+    // descartaba sin dejar rastro).
+    const results = await Promise.allSettled(
+      professionals.map((pro) =>
+        notificationsService.create(
+          {
+            userId: pro.id,
+            title: NOTIF_DIARY_RISK_ALERT,
+            message,
+          },
+          { bypassPrefs: true },
+        ),
+      ),
     );
+    results.forEach((r, i) => {
+      if (r.status === "rejected") {
+        console.error(
+          `[risk-analysis] entry=${entryId} no se pudo notificar al profesional ${professionals[i].id}:`,
+          r.reason,
+        );
+      }
+    });
+
+    // Correo: en segundo plano con reintentos y log de cada fallo. Es la alerta
+    // más crítica de la app, no puede perderse por un fallo puntual del SMTP.
+    for (const pro of professionals) {
+      const lang = (pro.preferences?.language ?? "ES") as Language;
+      sendEmailInBackground(
+        {
+          to: pro.email,
+          subject: diaryRiskAlertSubject(lang),
+          html: diaryRiskAlertTemplate(
+            pro.firstName,
+            userName,
+            preview,
+            detectedAt,
+            notificationsUrl,
+            lang,
+          ),
+        },
+        `risk-alert entry=${entryId}`,
+      );
+    }
   } catch (err) {
     console.error("Risk analysis failed for diary entry", entryId, err);
   }

@@ -4,6 +4,7 @@ export const AUTH_INVALID_CREDENTIALS = "AUTH_INVALID_CREDENTIALS"; // Credencia
 export const AUTH_INVALID_TOKEN = "AUTH_INVALID_TOKEN"; // Token ausente, inválido o expirado
 export const AUTH_TOKEN_REUSE = "AUTH_TOKEN_REUSE"; // Reuso de refresh token detectado — sesiones revocadas
 export const AUTH_EMAIL_NOT_VERIFIED = "AUTH_EMAIL_NOT_VERIFIED";
+export const AUTH_EMAIL_NOT_REGISTERED = "AUTH_EMAIL_NOT_REGISTERED"; // "Olvidé mi contraseña" con un correo sin cuenta
 export const AUTH_ACCOUNT_LOCKED = "AUTH_ACCOUNT_LOCKED"; // Cuenta bloqueada por demasiados intentos fallidos       // El email aún no ha sido verificado
 export const AUTH_INVALID_DOMAIN = "AUTH_INVALID_DOMAIN"; // Solo se permiten correos @fet.edu.co
 export const AUTH_VERIFICATION_TOKEN_INVALID =
