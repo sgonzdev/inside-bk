@@ -243,7 +243,27 @@ export class AuthService {
     const user = await this.repo.findByEmailForReset(data.email);
 
     // Respuesta siempre exitosa — no revelar si el email existe
-    if (!user || !user.emailVerified) return;
+    if (!user) return;
+
+    // Si el usuario existe pero no verifico email, re-enviar el correo
+    // de verificacion (con token nuevo) en vez del de reset.
+    if (!user.emailVerified) {
+      await this.repo.deleteVerificationTokensByUser(user.id, TokenType.EMAIL_VERIFICATION);
+      const vToken = crypto.randomUUID();
+      const vExpiresAt = new Date(Date.now() + env.EMAIL_VERIFICATION_EXPIRES_H * 60 * 60 * 1000);
+      await this.repo.createVerificationToken(vToken, user.id, TokenType.EMAIL_VERIFICATION, vExpiresAt);
+      const vUrl = `${env.FRONTEND_URL}/verify-email?token=${vToken}`;
+      try {
+        await sendEmail({
+          to: data.email,
+          subject: "Verifica tu correo - InsideOut Expressions",
+          html: verifyEmailTemplate(user.firstName, vUrl, "ES", env.EMAIL_VERIFICATION_EXPIRES_H),
+        });
+      } catch (err) {
+        console.error("[forgotPassword] sendEmail (verification) failed:", err);
+      }
+      return;
+    }
 
     await this.repo.deleteVerificationTokensByUser(user.id, TokenType.PASSWORD_RESET);
 
@@ -252,11 +272,15 @@ export class AuthService {
     await this.repo.createVerificationToken(token, user.id, TokenType.PASSWORD_RESET, expiresAt);
 
     const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${token}`;
-    await sendEmail({
-      to: data.email,
-      subject: "Restablece tu contraseña - InsideOut Expressions",
-      html: resetPasswordTemplate(user.firstName, resetUrl, "ES", env.PASSWORD_RESET_EXPIRES_MIN),
-    });
+    try {
+      await sendEmail({
+        to: data.email,
+        subject: "Restablece tu contraseña - InsideOut Expressions",
+        html: resetPasswordTemplate(user.firstName, resetUrl, "ES", env.PASSWORD_RESET_EXPIRES_MIN),
+      });
+    } catch (err) {
+      console.error("[forgotPassword] sendEmail (reset) failed:", err);
+    }
   }
 
   async resetPassword(data: ResetPasswordInput) {
